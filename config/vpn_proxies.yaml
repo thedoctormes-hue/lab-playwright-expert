@@ -1,0 +1,30 @@
+# VPN Proxy Configuration — Lab Playwright Kit
+# Лаборатория DoctorM&Ai
+#
+# Прокси для обхода DPI и геоблокировки.
+# Используются в scripts/geo_check.py, scripts/crosspost.py, scripts/site_monitor.py
+#
+# Формат имени: poland, florida, direct
+# Протокол: VLESS+REALITY (socks5 на локальном порту)
+
+proxies:
+  - name: poland
+    server: socks5://127.0.0.1:10808
+    country: PL
+    exit_ip: "78.17.43.205"
+    protocol: "VLESS+REALITY"
+    description: "Warsaw server — VLESS+REALITY, xhttp obfuscation"
+
+  - name: florida
+    server: socks5://127.0.0.1:63567
+    country: US
+    exit_ip: "104.253.1.210"
+    protocol: "VLESS+REALITY"
+    description: "Florida server — VLESS+REALITY, xhttp obfuscation"
+
+  - name: direct
+    server: null
+    country: DIRECT
+    exit_ip: "89.169.4.51"
+    protocol: "DIRECT"
+    description: "Прямое подключение без прокси (DPI bypass через xhttp+REALITY)"

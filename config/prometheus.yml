@@ -1,0 +1,36 @@
+# ============================================================
+# Prometheus конфигурация — lab-playwright-expert
+# ============================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Алертинг через Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+# Правила алертов
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  # ---- Screenshot Service self-metrics ----
+  - job_name: "screenshot-service"
+    scrape_interval: 15s
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["screenshot-service:8190"]
+        labels:
+          service: "screenshot-service"
+          project: "lab-playwright-expert"
+
+  # ---- Node Exporter (хост) ----
+  - job_name: "node"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: "node-exporter"

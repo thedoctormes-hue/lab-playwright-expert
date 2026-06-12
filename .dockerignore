@@ -1,0 +1,66 @@
+# ============================================================
+# .dockerignore — lab-playwright-expert
+# ============================================================
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.egg-info
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+docs/
+*.md
+LICENSE
+
+# CI
+.github/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# Tests (не нужны в runtime-образе)
+tests/
+
+# Scripts (не все нужны в runtime)
+scripts/
+!scripts/screenshot_service.py
+
+# Config (частично)
+config/prometheus.yml
+config/alerts.yml
+config/nginx-ssl.conf
+config/screenshot-*.service
+config/screenshot-*.timer
+config/security-*.service
+config/security-*.timer
+
+# Misc
+Makefile
+setup.py

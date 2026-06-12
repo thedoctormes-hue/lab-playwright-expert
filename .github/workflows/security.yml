@@ -1,0 +1,173 @@
+# ============================================================
+# Security Pipeline — ежедневный аудит + при push на main
+# Triggers: schedule (ежедневно в 06:00 UTC) + push на main
+# ============================================================
+name: Security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-audit:
+    name: "Security Audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-security-${{ hashFiles('pyproject.toml', 'requirements.txt') }}
+          restore-keys: pip-security-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install bandit[sarif] safety pip-audit
+
+      # ─── Bandit: статический анализ безопасности ──────────
+      - name: Bandit scan
+        run: |
+          bandit \
+            -r src/ scripts/ \
+            -c pyproject.toml \
+            -f sarif \
+            -o bandit-results.sarif \
+            --severity-level medium \
+            --confidence-level medium \
+            || true
+
+      - name: Upload Bandit SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-sarif
+          path: bandit-results.sarif
+          retention-days: 30
+
+      # ─── Safety: проверка зависимостей ────────────────────
+      - name: Safety check
+        run: |
+          safety check \
+            --full-report \
+            --output json \
+            > safety-results.json \
+            || true
+
+      - name: Upload Safety results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-results
+          path: safety-results.json
+          retention-days: 30
+
+      # ─── pip-audit: альтернативная проверка зависимостей ──
+      - name: pip-audit
+        run: |
+          pip-audit \
+            --format json \
+            --output pip-audit-results.json \
+            || true
+
+      - name: Upload pip-audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-results
+          path: pip-audit-results.json
+          retention-days: 30
+
+      # ─── Custom security audit ─────────────────────────────
+      - name: Run security_audit.py
+        run: |
+          python scripts/security_audit.py --json > security-audit-results.json \
+            || true
+
+      - name: Upload security audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-results
+          path: security-audit-results.json
+          retention-days: 30
+
+      # ─── Secret detection (gitleaks) ───────────────────────
+      - name: Secret detection
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      # ─── Summary ───────────────────────────────────────────
+      - name: Security summary
+        if: always()
+        run: |
+          echo "## 🔒 Security Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Bandit summary
+          if [ -f bandit-results.sarif ]; then
+            BANDIT_ISSUES=$(python3 -c "
+          import json
+          with open('bandit-results.sarif') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          print(f'{len(results)} issues found')
+          " 2>/dev/null || echo "parse error")
+            echo "- **Bandit**: $BANDIT_ISSUES" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Safety summary
+          if [ -f safety-results.json ]; then
+            SAFETY_ISSUES=$(python3 -c "
+          import json
+          with open('safety-results.json') as f:
+              data = json.load(f)
+          vulns = data if isinstance(data, list) else data.get('vulnerabilities', [])
+          print(f'{len(vulns)} vulnerabilities found')
+          " 2>/dev/null || echo "parse error")
+            echo "- **Safety**: $SAFETY_ISSUES" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # pip-audit summary
+          if [ -f pip-audit-results.json ]; then
+            PIP_AUDIT=$(python3 -c "
+          import json
+          with open('pip-audit-results.json') as f:
+              data = json.load(f)
+          deps = data.get('dependencies', [])
+          vulns = sum(len(d.get('vulns', [])) for d in deps)
+          print(f'{vulns} vulnerabilities in {len(deps)} packages')
+          " 2>/dev/null || echo "parse error")
+            echo "- **pip-audit**: $PIP_AUDIT" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Custom audit summary
+          if [ -f security-audit-results.json ]; then
+            AUDIT_SUMMARY=$(python3 -c "
+          import json
+          with open('security-audit-results.json') as f:
+              data = json.load(f)
+          s = data.get('summary', {})
+          print(f'{s.get(\"total_findings\", 0)} findings (C:{s.get(\"critical\",0)} H:{s.get(\"high\",0)} M:{s.get(\"medium\",0)})')
+          " 2>/dev/null || echo "parse error")
+            echo "- **Custom Audit**: $AUDIT_SUMMARY" >> $GITHUB_STEP_SUMMARY
+          fi

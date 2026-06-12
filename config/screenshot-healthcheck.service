@@ -1,0 +1,11 @@
+[Unit]
+Description=Screenshot Service Health Monitor
+After=network.target screenshot-service.service
+Wants=screenshot-service.service
+
+[Service]
+Type=oneshot
+ExecStart=/root/LabDoctorM/projects/lab-playwright-expert/.venv/bin/python3 /root/LabDoctorM/projects/lab-playwright-expert/scripts/health_monitor.py --url http://localhost:8190 --timeout 10
+WorkingDirectory=/root/LabDoctorM/projects/lab-playwright-expert
+StandardOutput=journal
+StandardError=journal

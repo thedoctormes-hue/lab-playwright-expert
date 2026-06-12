@@ -1,0 +1,234 @@
+# ============================================================
+# Prometheus Alert Rules — lab-playwright-expert
+# ============================================================
+# Пороговые значения:
+#   WARNING  — требует внимания, но не критично
+#   CRITICAL — требует немедленных действий
+# ============================================================
+
+groups:
+  - name: playwright_alerts
+    rules:
+
+      # === Screenshot Service ===
+
+      - alert: ScreenshotHighErrorRate
+        expr: |
+          sum(rate(screenshot_requests_total{status="error"}[5m]))
+          / sum(rate(screenshot_requests_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          group: screenshot-service
+        annotations:
+          summary: "Screenshot error rate > 5%"
+          description: "Error rate is {{ $value | humanizePercentage }} over last 5m"
+
+      - alert: ScreenshotCriticalErrorRate
+        expr: |
+          sum(rate(screenshot_requests_total{status="error"}[5m]))
+          / sum(rate(screenshot_requests_total[5m])) > 0.15
+        for: 1m
+        labels:
+          severity: critical
+          group: screenshot-service
+        annotations:
+          summary: "Screenshot error rate > 15%"
+          description: "Error rate is {{ $value | humanizePercentage }} — critical!"
+
+      - alert: ScreenshotHighLatency
+        expr: |
+          histogram_quantile(0.95, rate(screenshot_latency_seconds_bucket[5m])) > 8
+        for: 2m
+        labels:
+          severity: warning
+          group: screenshot-service
+        annotations:
+          summary: "Screenshot p95 latency > 8s"
+          description: "p95 latency is {{ $value | humanizeDuration }}"
+
+      - alert: ScreenshotCriticalLatency
+        expr: |
+          histogram_quantile(0.95, rate(screenshot_latency_seconds_bucket[5m])) > 15
+        for: 1m
+        labels:
+          severity: critical
+          group: screenshot-service
+        annotations:
+          summary: "Screenshot p95 latency > 15s"
+          description: "p95 latency is {{ $value | humanizeDuration }} — critical!"
+
+      - alert: ScreenshotLowCacheHitRate
+        expr: |
+          rate(screenshot_cache_hits_total[10m])
+          / (rate(screenshot_cache_hits_total[10m]) + rate(screenshot_cache_misses_total[10m])) < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          group: screenshot-service
+        annotations:
+          summary: "Screenshot cache hit rate < 50%"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+      - alert: ScreenshotTooManyBrowsers
+        expr: screenshot_active_browsers > 5
+        for: 1m
+        labels:
+          severity: warning
+          group: screenshot-service
+        annotations:
+          summary: "Too many active browsers ({{ $value }})"
+          description: "Concurrent browser instances: {{ $value }} (threshold: 5)"
+
+      - alert: ScreenshotBrowserLaunchErrors
+        expr: |
+          increase(screenshot_browser_errors_total{error_type="launch"}[5m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+          group: screenshot-service
+        annotations:
+          summary: "Browser launch errors detected"
+          description: "{{ $value }} launch errors in last 5m"
+
+      # === Site Monitor ===
+
+      - alert: SiteDown
+        expr: |
+          site_monitor_http_status_code >= 400 or site_monitor_http_status_code == 0
+        for: 0m
+        labels:
+          severity: critical
+          group: site-monitor
+        annotations:
+          summary: "Site {{ $labels.site }} is DOWN"
+          description: "HTTP status: {{ $value }}"
+
+      - alert: SiteDegraded
+        expr: |
+          increase(site_monitor_checks_total{status="degraded"}[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          group: site-monitor
+        annotations:
+          summary: "Site {{ $labels.site }} degraded"
+          description: "{{ $value }} degraded checks in last 10m"
+
+      - alert: SiteLowUptime
+        expr: site_monitor_uptime_ratio < 0.99
+        for: 10m
+        labels:
+          severity: warning
+          group: site-monitor
+        annotations:
+          summary: "Site {{ $labels.site }} uptime < 99%"
+          description: "Uptime: {{ $value | humanizePercentage }}"
+
+      - alert: SiteCriticalUptime
+        expr: site_monitor_uptime_ratio < 0.95
+        for: 5m
+        labels:
+          severity: critical
+          group: site-monitor
+        annotations:
+          summary: "Site {{ $labels.site }} uptime < 95%"
+          description: "Uptime: {{ $value | humanizePercentage }} — critical!"
+
+      - alert: SiteVisualRegression
+        expr: site_monitor_visual_diff_ratio > 0.10
+        for: 0m
+        labels:
+          severity: warning
+          group: site-monitor
+        annotations:
+          summary: "Visual regression on {{ $labels.site }}"
+          description: "Visual diff: {{ $value | humanizePercentage }}"
+
+      # === CrossPost ===
+
+      - alert: CrossPostHighFailureRate
+        expr: |
+          sum(rate(crosspost_posts_total{status=~"error|auth_fail"}[30m]))
+          / sum(rate(crosspost_posts_total[30m])) > 0.10
+        for: 0m
+        labels:
+          severity: warning
+          group: crosspost
+        annotations:
+          summary: "Crosspost failure rate > 10%"
+          description: "Failure rate: {{ $value | humanizePercentage }}"
+
+      - alert: CrossPostAuthFailure
+        expr: increase(crosspost_errors_total{error_type="auth"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          group: crosspost
+        annotations:
+          summary: "Crosspost auth failure on {{ $labels.platform }}"
+          description: "Authentication failed — cookies may be expired"
+
+      - alert: CrossPostCookiesExpiring
+        expr: crosspost_cookies_age_hours > 72
+        for: 0m
+        labels:
+          severity: warning
+          group: crosspost
+        annotations:
+          summary: "Crosspost cookies expiring on {{ $labels.platform }}"
+          description: "Cookies age: {{ $value | humanizeDuration }}"
+
+      # === Stealth ===
+
+      - alert: StealthScoreLow
+        expr: stealth_overall_score_percent < 80
+        for: 0m
+        labels:
+          severity: warning
+          group: stealth
+        annotations:
+          summary: "Stealth score < 80%"
+          description: "Score: {{ $value }}%"
+
+      - alert: StealthScoreCritical
+        expr: stealth_overall_score_percent < 60
+        for: 0m
+        labels:
+          severity: critical
+          group: stealth
+        annotations:
+          summary: "Stealth score < 60% — critical!"
+          description: "Score: {{ $value }}%"
+
+      - alert: StealthWebdriverDetected
+        expr: stealth_score_percent{test="webdriver"} < 100
+        for: 0m
+        labels:
+          severity: critical
+          group: stealth
+        annotations:
+          summary: "Webdriver detected by anti-bot!"
+          description: "navigator.webdriver is exposed"
+
+      # === Health Monitor ===
+
+      - alert: ServiceDown
+        expr: health_monitor_uptime_percent < 95
+        for: 2m
+        labels:
+          severity: critical
+          group: health-monitor
+        annotations:
+          summary: "Service {{ $labels.target }} is DOWN"
+          description: "Uptime: {{ $value }}%"
+
+      - alert: ServiceDegraded
+        expr: health_monitor_uptime_percent < 99
+        for: 5m
+        labels:
+          severity: warning
+          group: health-monitor
+        annotations:
+          summary: "Service {{ $labels.target }} degraded"
+          description: "Uptime: {{ $value }}%"

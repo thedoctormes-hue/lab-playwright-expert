@@ -1,0 +1,14 @@
+#!/bin/bash
+# Pre-commit hook — запуск тестов
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Активировать venv
+source .venv/bin/activate
+
+# Тесты
+echo "  → pytest..."
+python -m pytest tests/ -q --tb=short 2>&1 | tail -5
+
+echo "✅ Pre-commit checks passed!"

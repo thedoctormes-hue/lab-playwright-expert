@@ -1,0 +1,1112 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Lab Playwright Kit — SaaS Parsing API",
+    "description": "API для парсинга данных из браузера с антидетектом и авторизацией",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health Check",
+        "description": "Health check.",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "System Status",
+        "description": "Статус системы.",
+        "operationId": "system_status_api_v1_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/parse": {
+      "post": {
+        "tags": [
+          "Parsing"
+        ],
+        "summary": "Parse Url",
+        "description": "Парсинг одного URL по схеме ниши.\n\nАвтоматически определяет нишу по URL если не указана.\nПоддерживает все 10 ниш: ecommerce, news, realty, medtech, jobs, auto, habr, vcru, twitter, telegram.",
+        "operationId": "parse_url_api_v1_parse_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/parse/batch": {
+      "post": {
+        "tags": [
+          "Parsing"
+        ],
+        "summary": "Parse Batch",
+        "description": "Батч-парсинг нескольких URL.\n\nПараллельное выполнение с ограничением concurrency.\nЗадержка между запросами для избежания rate limiting.",
+        "operationId": "parse_batch_api_v1_parse_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchParseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchParseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/niches": {
+      "get": {
+        "tags": [
+          "Niches"
+        ],
+        "summary": "List Niches",
+        "description": "Список всех доступных ниш для парсинга.",
+        "operationId": "list_niches_api_v1_niches_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NicheInfo"
+                  },
+                  "type": "array",
+                  "title": "Response List Niches Api V1 Niches Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/niches/{name}": {
+      "get": {
+        "tags": [
+          "Niches"
+        ],
+        "summary": "Get Niche",
+        "description": "Детали ниши по имени.",
+        "operationId": "get_niche_api_v1_niches__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NicheInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Auth Login",
+        "description": "Авторизация на платформе.\n\nПоддерживаемые платформы: habr, vcru, twitter, telegram.\nСессия сохраняется и может быть переиспользована.",
+        "operationId": "auth_login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/check": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Auth Check",
+        "description": "Проверка авторизации на платформе.",
+        "operationId": "auth_check_api_v1_auth_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/2fa": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Auth 2Fa",
+        "description": "Ввод 2FA кода после логина.",
+        "operationId": "auth_2fa_api_v1_auth_2fa_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth2FARequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Auth List Sessions",
+        "description": "Список активных сессий.",
+        "operationId": "auth_list_sessions_api_v1_auth_sessions_get",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Фильтр по платформе",
+              "default": "",
+              "title": "Platform"
+            },
+            "description": "Фильтр по платформе"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions/{platform}/{username}": {
+      "delete": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Auth Delete Session",
+        "description": "Удалить сохранённую сессию.",
+        "operationId": "auth_delete_session_api_v1_auth_sessions__platform___username__delete",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Platform"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/presets": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Auth List Presets",
+        "description": "Список доступных пресетов авторизации.",
+        "operationId": "auth_list_presets_api_v1_auth_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/publish": {
+      "post": {
+        "tags": [
+          "Publish"
+        ],
+        "summary": "Publish Content",
+        "description": "Опубликовать контент на платформе.\n\nТребует предварительной авторизации через POST /api/v1/auth/login.\nПоддерживает: habr, vcru, tenchat.",
+        "operationId": "publish_content_api_v1_publish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Auth2FARequest": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "title": "Platform",
+            "description": "Платформа"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Логин"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "2FA код"
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform",
+          "username",
+          "code"
+        ],
+        "title": "Auth2FARequest",
+        "description": "Запрос на ввод 2FA кода."
+      },
+      "AuthCheckRequest": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "title": "Platform",
+            "description": "Платформа"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Логин (пусто = любая сессия)",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform"
+        ],
+        "title": "AuthCheckRequest",
+        "description": "Запрос на проверку авторизации."
+      },
+      "AuthLoginRequest": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "title": "Platform",
+            "description": "Платформа (habr, vcru, twitter, telegram)"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Логин / email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Пароль"
+          },
+          "proxy_url": {
+            "type": "string",
+            "title": "Proxy Url",
+            "description": "Прокси",
+            "default": ""
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "description": "Принудительная переавторизация",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform",
+          "username",
+          "password"
+        ],
+        "title": "AuthLoginRequest",
+        "description": "Запрос на авторизацию."
+      },
+      "AuthResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "session_name": {
+            "type": "string",
+            "title": "Session Name"
+          },
+          "cookies_count": {
+            "type": "integer",
+            "title": "Cookies Count"
+          },
+          "elapsed_seconds": {
+            "type": "number",
+            "title": "Elapsed Seconds"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "status",
+          "platform",
+          "username",
+          "message",
+          "session_name",
+          "cookies_count",
+          "elapsed_seconds",
+          "error"
+        ],
+        "title": "AuthResponse",
+        "description": "Ответ авторизации."
+      },
+      "BatchParseRequest": {
+        "properties": {
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Urls",
+            "description": "Список URL"
+          },
+          "niche": {
+            "type": "string",
+            "title": "Niche",
+            "description": "Ниша (пусто = автоопределение)",
+            "default": ""
+          },
+          "timeout": {
+            "type": "number",
+            "title": "Timeout",
+            "description": "Таймаут на каждый URL",
+            "default": 30.0
+          },
+          "proxy_url": {
+            "type": "string",
+            "title": "Proxy Url",
+            "description": "Прокси",
+            "default": ""
+          },
+          "max_concurrency": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Concurrency",
+            "description": "Параллельные воркеры",
+            "default": 3
+          },
+          "delay_between": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Delay Between",
+            "description": "Задержка между запросами (сек)",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "urls"
+        ],
+        "title": "BatchParseRequest",
+        "description": "Запрос на батч-парсинг."
+      },
+      "BatchParseResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "successful": {
+            "type": "integer",
+            "title": "Successful"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ParseResponse"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "elapsed_seconds": {
+            "type": "number",
+            "title": "Elapsed Seconds"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "successful",
+          "failed",
+          "results",
+          "elapsed_seconds",
+          "request_id"
+        ],
+        "title": "BatchParseResponse",
+        "description": "Ответ батч-парсинга."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "uptime_seconds": {
+            "type": "number",
+            "title": "Uptime Seconds"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "uptime_seconds",
+          "timestamp"
+        ],
+        "title": "HealthResponse",
+        "description": "Health check ответ."
+      },
+      "NicheInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "url_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Url Patterns"
+          },
+          "required_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "display_name",
+          "description",
+          "fields",
+          "url_patterns",
+          "required_fields"
+        ],
+        "title": "NicheInfo",
+        "description": "Информация о нише."
+      },
+      "ParseRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "URL для парсинга"
+          },
+          "niche": {
+            "type": "string",
+            "title": "Niche",
+            "description": "Ниша (пусто = автоопределение)",
+            "default": ""
+          },
+          "timeout": {
+            "type": "number",
+            "title": "Timeout",
+            "description": "Таймаут в секундах",
+            "default": 30.0
+          },
+          "proxy_url": {
+            "type": "string",
+            "title": "Proxy Url",
+            "description": "Прокси (пусто = direct)",
+            "default": ""
+          },
+          "wait_for": {
+            "type": "string",
+            "title": "Wait For",
+            "description": "Селектор для ожидания перед парсингом",
+            "default": ""
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata",
+            "description": "Доп. данные"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ParseRequest",
+        "description": "Запрос на парсинг одного URL."
+      },
+      "ParseResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "niche": {
+            "type": "string",
+            "title": "Niche"
+          },
+          "data": {
+            "type": "object",
+            "title": "Data"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "parse_time_ms": {
+            "type": "number",
+            "title": "Parse Time Ms"
+          },
+          "page_title": {
+            "type": "string",
+            "title": "Page Title"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "parsed_at": {
+            "type": "string",
+            "title": "Parsed At"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "url",
+          "niche",
+          "data",
+          "confidence",
+          "parse_time_ms",
+          "page_title",
+          "domain",
+          "errors",
+          "parsed_at",
+          "request_id"
+        ],
+        "title": "ParseResponse",
+        "description": "Ответ парсинга."
+      },
+      "PublishRequest": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "title": "Platform",
+            "description": "Платформа (habr, vcru, tenchat)"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Заголовок поста/статьи",
+            "default": ""
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Текст контента (HTML или plain text)"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Логин (пусто = первая доступная сессия)",
+            "default": ""
+          },
+          "proxy_url": {
+            "type": "string",
+            "title": "Proxy Url",
+            "description": "Прокси",
+            "default": ""
+          },
+          "timeout": {
+            "type": "number",
+            "title": "Timeout",
+            "description": "Таймаут в секундах",
+            "default": 60.0
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "description": "Тестовый прогон без публикации",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform",
+          "content"
+        ],
+        "title": "PublishRequest",
+        "description": "Запрос на публикацию контента на платформе."
+      },
+      "PublishResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "elapsed_seconds": {
+            "type": "number",
+            "title": "Elapsed Seconds"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "platform",
+          "url",
+          "message",
+          "elapsed_seconds",
+          "error",
+          "dry_run"
+        ],
+        "title": "PublishResponse",
+        "description": "Ответ публикации."
+      },
+      "StatusResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "uptime_seconds": {
+            "type": "number",
+            "title": "Uptime Seconds"
+          },
+          "browser_active": {
+            "type": "boolean",
+            "title": "Browser Active"
+          },
+          "active_sessions": {
+            "type": "integer",
+            "title": "Active Sessions"
+          },
+          "available_niches": {
+            "type": "integer",
+            "title": "Available Niches"
+          },
+          "available_presets": {
+            "type": "integer",
+            "title": "Available Presets"
+          },
+          "proxy_count": {
+            "type": "integer",
+            "title": "Proxy Count"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "uptime_seconds",
+          "browser_active",
+          "active_sessions",
+          "available_niches",
+          "available_presets",
+          "proxy_count",
+          "timestamp"
+        ],
+        "title": "StatusResponse",
+        "description": "Статус системы."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

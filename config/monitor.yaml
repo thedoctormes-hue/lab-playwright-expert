@@ -1,0 +1,62 @@
+# Конфигурация мониторинга сайтов лаборатории
+# Поддерживает два формата:
+#  - Список SITES (для site_monitor.py)
+#  - Секция SERVICE_MONITOR (для ServiceMonitor)
+
+SITES = [
+    {
+        "name": "snablab",
+        "url": "https://snablab.shtab-ai.ru",
+        "expected_title": "СнабЛаб",
+        "selectors": ["#app"],
+    },
+    {
+        "name": "blog",
+        "url": "https://articles.shtab-ai.ru",
+        "expected_title": "",
+        "selectors": [],
+    },
+]
+
+# Настройки
+HEADLESS = True
+INTERVAL_SECONDS = 300
+TIMEOUT_MS = 30000
+VISUAL_THRESHOLD = 0.15
+
+# ─── ServiceMonitor configuration ─────────────────────────────────────────────
+
+SERVICE_MONITOR = {
+    "services": [
+        {
+            "name": "snablab",
+            "url": "https://snablab.shtab-ai.ru",
+            "expected_status": 200,
+            "expected_title": "СнабЛаб",
+            "expected_text": "Управление закупками",
+            "selectors": ["#app"],
+            "timeout_ms": 30000,
+            "visual_baseline": True,
+            "critical": True,
+        },
+        {
+            "name": "blog",
+            "url": "https://articles.shtab-ai.ru",
+            "expected_status": 200,
+            "expected_title": "",
+            "expected_text": "",
+            "selectors": [],
+            "timeout_ms": 30000,
+            "visual_baseline": False,
+            "critical": False,
+        },
+    ],
+    "screenshot_dir": "/tmp/playwright_monitor",
+    "baseline_dir": "/tmp/playwright_baselines",
+    "report_file": "/tmp/monitor_report.json",
+    "visual_threshold": 0.15,
+    "telegram": {
+        "bot_token_env": "MONITOR_BOT_TOKEN",
+        "chat_id_env": "MONITOR_CHAT_ID",
+    },
+}

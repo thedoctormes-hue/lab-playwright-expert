@@ -1,0 +1,112 @@
+# ============================================================
+# systemd unit — Screenshot-as-a-Service (Secure)
+# ============================================================
+# Установка:
+#   sudo cp screenshot-service.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now screenshot-service
+#
+# Логи:
+#   journalctl -u screenshot-service -f
+# ============================================================
+
+[Unit]
+Description=Screenshot-as-a-Service (Secure)
+After=network.target
+Wants=network.target
+
+# Зависимость от secrets директории
+RequiresMountsFor=/root/LabDoctorM/.secrets
+
+[Service]
+Type=simple
+User=screenshot-service
+Group=screenshot-service
+
+# ─── Команда запуска ───────────────────────────────────────────
+WorkingDirectory=/root/LabDoctorM/projects/lab-playwright-expert
+ExecStart=/root/LabDoctorM/projects/lab-playwright-expert/.venv/bin/python3 \
+    /root/LabDoctorM/projects/lab-playwright-expert/scripts/screenshot_service_secure.py
+
+# Переменные окружения
+Environment=PYTHONUNBUFFERED=1
+Environment=SCREENSHOT_CACHE_DIR=/tmp/screenshot_cache_secure
+Environment=CACHE_TTL=300
+Environment=RATE_LIMIT_REQUESTS=10
+Environment=RATE_LIMIT_WINDOW=60
+Environment=SECRETS_DIR=/root/LabDoctorM/.secrets
+
+# API Key из файла (не в юните!)
+EnvironmentFile=-/root/LabDoctorM/.secrets/screenshot-service.env
+
+# ─── Политика перезапуска ──────────────────────────────────────
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# ─── Ограничение ресурсов (cgroup v2) ──────────────────────────
+# CPU
+CPUQuota=200%
+CPUWeight=100
+
+# Memory
+MemoryMax=2G
+MemoryHigh=1.5G
+MemorySwapMax=0
+
+# Tasks (PID limit)
+TasksMax=256
+
+# File descriptors
+LimitNOFILE=2048:4096
+LimitNPROC=128:256
+
+# ─── Безопасность ──────────────────────────────────────────────
+# Файловая система
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+ProtectProc=invisible
+ProcSubset=pid
+
+# Сеть — только loopback (сервис не торчит наружу)
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressAllow=127.0.0.1/32
+IPAddressAllow=::1/128
+IPAddressDeny=any
+
+# Capabilities — минимальные
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Системные вызовы
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+SystemCallErrorNumber=EPERM
+
+# Запрет
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=false  # Нужны для Chromium sandbox
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+# ─── Логирование ───────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=screenshot-service
+
+# ─── Таймауты ──────────────────────────────────────────────────
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

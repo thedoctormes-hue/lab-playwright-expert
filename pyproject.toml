@@ -1,0 +1,113 @@
+[project]
+name = "lab-playwright-kit"
+version = "2.0.0"
+description = "Lab Playwright Kit — advanced browser automation framework with anti-detection, human behavior simulation, and LLM-powered agents"
+readme = "README.md"
+license = {text = "CC-BY-NC-SA-4.0"}
+requires-python = ">=3.10"
+keywords = [
+    "playwright",
+    "browser-automation",
+    "stealth",
+    "anti-detection",
+    "web-scraping",
+    "crawler",
+    "llm-agent",
+    "fingerprint",
+]
+authors = [{name = "LabDoctorM", email = "lab@doctormai.ru"}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: Browsers",
+]
+
+dependencies = [
+    "playwright>=1.59.0",
+    "python-dotenv>=1.0.0",
+    "Pillow>=10.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "loguru>=0.7.0",
+]
+
+[project.optional-dependencies]
+metrics = ["prometheus-client>=0.20.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "bandit[sarif]>=1.7",
+    "safety>=3.0",
+    "build>=1.0",
+]
+full = [
+    "fastapi>=0.136",
+    "uvicorn>=0.30.0",
+    "aiogram>=3.0.0",
+    "psutil>=5.9.0",
+    "pyyaml>=6.0",
+    "cryptography>=42.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/doctormai/lab-playwright-kit"
+Documentation = "https://github.com/doctormai/lab-playwright-kit/blob/main/docs/"
+Repository = "https://github.com/doctormai/lab-playwright-kit"
+Changelog = "https://github.com/doctormai/lab-playwright-kit/blob/main/CHANGELOG.md"
+
+[project.scripts]
+screenshot-service = "screenshot_service:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src", "scripts"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501", "E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lab_playwright_kit"]
+force-single-line = false
+lines-after-imports = 2
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "tests/*",
+    "scripts/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError:",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

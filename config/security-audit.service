@@ -1,0 +1,24 @@
+[Unit]
+Description=Security Audit — Playwright Infrastructure
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/root/LabDoctorM/projects/lab-playwright-expert/.venv/bin/python3 \
+    /root/LabDoctorM/projects/lab-playwright-expert/scripts/security_audit.py \
+    --json
+WorkingDirectory=/root/LabDoctorM/projects/lab-playwright-expert
+StandardOutput=append:/var/log/screenshot-service/audit.log
+StandardError=append:/var/log/screenshot-service/audit-error.log
+
+# Переменные
+Environment=SCREENSHOT_API_KEY_FILE=/root/LabDoctorM/.secrets/screenshot-service.env
+Environment=SCREENSHOT_SERVICE_URL=http://127.0.0.1:8190
+
+# Безопасность
+User=root
+Group=root
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=true
+ProtectHome=true

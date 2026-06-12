@@ -1,0 +1,111 @@
+# ============================================================
+# Dockerfile (Secure) — Screenshot-as-a-Service
+# ============================================================
+# Улучшения безопасности:
+#   1. Non-root пользователь (uid 1001)
+#   2. Read-only root filesystem
+#   3. Dropped capabilities (ALL)
+#   4. No-new-privileges
+#   5. Seccomp profile для Chromium
+#   6. Минимальный runtime образ
+#   7. Multi-stage для уменьшения поверхности атаки
+# ============================================================
+
+# ---- Stage 1: Builder ----
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ---- Stage 2: Runtime ----
+FROM python:3.11-slim AS runtime
+
+LABEL maintainer="LabDoctorM <streikbrecher>"
+LABEL description="Screenshot-as-a-Service — Secure Build"
+LABEL version="1.0.0-secure"
+
+# Системные зависимости для Playwright Chromium
+# Минимальный набор — только необходимое
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libatspi2.0-0 \
+    curl \
+    # Seccomp — для Chromium sandbox
+    libseccomp2 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Установить Playwright Chromium
+RUN pip install --no-cache-dir playwright>=1.59.0 \
+    && playwright install chromium \
+    && rm -rf /root/.cache/pip
+
+# Скопировать Python-пакеты из builder
+COPY --from=builder /install /usr/local
+
+# ─── Создать non-root пользователя ─────────────────────────────
+RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+    && mkdir -p /home/pptruser/Downloads \
+    && chown -R pptruser:pptruser /home/pptruser
+
+# Рабочая директория
+WORKDIR /app
+RUN chown pptruser:pptruser /app
+
+# Кэш скриншотов — с безопасными правами
+RUN mkdir -p /tmp/screenshot_cache_secure \
+    && chown pptruser:pptruser /tmp/screenshot_cache_secure \
+    && chmod 700 /tmp/screenshot_cache_secure
+
+# Копировать исходный код
+COPY --chown=pptruser:pptruser src/ /app/src/
+COPY --chown=pptruser:pptruser scripts/screenshot_service_secure.py /app/screenshot_service.py
+
+# ─── Seccomp profile для Chromium ──────────────────────────────
+# Разрешаем только необходимые syscall для Chromium
+COPY --chown=pptruser:pptruser config/chromium-seccomp.json /app/chromium-seccomp.json 2>/dev/null || true
+
+# Переменные окружения
+ENV PYTHONPATH=/app/src:/app
+ENV PYTHONUNBUFFERED=1
+ENV CACHE_DIR=/tmp/screenshot_cache_secure
+ENV CACHE_TTL=300
+# Отключить setuid sandbox в контейнере (используем namespaces)
+ENV PLAYWRIGHT_CHROMIUM_USE_SANDBOX=0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -sf http://localhost:8190/health || exit 1
+
+# Порт
+EXPOSE 8190
+
+# ─── Переключиться на non-root ─────────────────────────────────
+USER pptruser
+
+# Запуск — только loopback (наружу не торчит)
+CMD ["uvicorn", "screenshot_service:app", \
+     "--host", "127.0.0.1", \
+     "--port", "8190", \
+     "--workers", "1", \
+     "--log-level", "info"]

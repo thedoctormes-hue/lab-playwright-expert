@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OSINT Finder</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: var(--tg-theme-bg-color, #1a1a2e);
+    --text: var(--tg-theme-text-color, #e0e0e0);
+    --hint: var(--tg-theme-hint-color, #888);
+    --link: var(--tg-theme-link-color, #64b5f6);
+    --btn: var(--tg-theme-button-color, #5c6bc0);
+    --btn-text: var(--tg-theme-button-text-color, #fff);
+    --secondary-bg: var(--tg-theme-secondary-bg-color, #16213e);
+    --accent: #64b5f6;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --danger: #f44336;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .header {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .header h1 { font-size: 24px; margin-bottom: 4px; }
+  .header p { color: var(--hint); font-size: 14px; }
+  .search-box {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .search-box input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid var(--secondary-bg);
+    border-radius: 12px;
+    background: var(--secondary-bg);
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box button {
+    padding: 12px 20px;
+    background: var(--btn);
+    color: var(--btn-text);
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+  }
+  .tag {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: var(--secondary-bg);
+    color: var(--hint);
+    font-size: 12px;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .tag.active {
+    background: var(--btn);
+    color: var(--btn-text);
+  }
+  .status {
+    text-align: center;
+    padding: 20px;
+    color: var(--hint);
+  }
+  .status .spinner {
+    display: inline-block;
+    width: 24px; height: 24px;
+    border: 3px solid var(--secondary-bg);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 16px 0 8px;
+  }
+  .results-header h2 { font-size: 18px; }
+  .results-header span { color: var(--hint); font-size: 13px; }
+  .account-card {
+    background: var(--secondary-bg);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .account-card .icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .account-card .info { flex: 1; min-width: 0; }
+  .account-card .platform { font-weight: 600; font-size: 15px; }
+  .account-card .username { color: var(--hint); font-size: 13px; }
+  .account-card .confidence {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .confidence.high { background: rgba(76,175,80,0.2); color: var(--success); }
+  .confidence.medium { background: rgba(255,152,0,0.2); color: var(--warning); }
+  .confidence.low { background: rgba(244,67,54,0.2); color: var(--danger); }
+  .empty { text-align: center; padding: 40px 20px; color: var(--hint); }
+  .empty .emoji { font-size: 48px; margin-bottom: 12px; }
+  .error { text-align: center; padding: 20px; color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔍 OSINT Finder</h1>
+  <p>Поиск аккаунтов на 50+ платформах</p>
+</div>
+
+<div class="search-box">
+  <input type="text" id="username" placeholder="Введите username..." autocomplete="off">
+  <button id="searchBtn" onclick="search()">Найти</button>
+</div>
+
+<div class="tags" id="tags">
+  <span class="tag" data-tag="social" onclick="toggleTag(this)">👥 Соцсети</span>
+  <span class="tag" data-tag="coding" onclick="toggleTag(this)">💻 Код</span>
+  <span class="tag" data-tag="ru" onclick="toggleTag(this)">🇷🇺 Русские</span>
+  <span class="tag" data-tag="forum" onclick="toggleTag(this)">💬 Форумы</span>
+  <span class="tag" data-tag="messaging" onclick="toggleTag(this)">✉️ Мессенджеры</span>
+  <span class="tag" data-tag="media" onclick="toggleTag(this)">🎬 Медиа</span>
+</div>
+
+<div id="results"></div>
+
+<script>
+  // Init Telegram Mini App
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor('#1a1a2e');
+  }
+
+  const API_BASE = ''; // Относительные URL — будет проксироваться через бота
+  let selectedTags = new Set();
+
+  function toggleTag(el) {
+    const tag = el.dataset.tag;
+    if (selectedTags.has(tag)) {
+      selectedTags.delete(tag);
+      el.classList.remove('active');
+    } else {
+      selectedTags.add(tag);
+      el.classList.add('active');
+    }
+  }
+
+  async function search() {
+    const username = document.getElementById('username').value.trim();
+    if (!username) return;
+
+    const btn = document.getElementById('searchBtn');
+    const results = document.getElementById('results');
+
+    btn.disabled = true;
+    results.innerHTML = `
+      <div class="status">
+        <div class="spinner"></div>
+        <div>Ищу <b>${escapeHtml(username)}</b>...</div>
+      </div>
+    `;
+
+    try {
+      const body = { username, top_n: 50 };
+      if (selectedTags.size > 0) body.tags = Array.from(selectedTags);
+
+      const resp = await fetch('/api/v1/osint/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const data = await resp.json();
+      renderResults(data);
+    } catch (err) {
+      results.innerHTML = `
+        <div class="error">
+          <div>❌ Ошибка</div>
+          <div style="font-size:13px;margin-top:8px">${escapeHtml(err.message)}</div>
+          <div style="font-size:12px;color:var(--hint);margin-top:8px">
+            Убедись что API запущен на сервере
+          </div>
+        </div>
+      `;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderResults(data) {
+    const results = document.getElementById('results');
+
+    if (!data.accounts || data.accounts.length === 0) {
+      results.innerHTML = `
+        <div class="empty">
+          <div class="emoji">🔍</div>
+          <div><b>${escapeHtml(data.query)}</b> не найден</div>
+          <div style="font-size:13px;margin-top:4px">
+            Проверено ${data.checked} платформ за ${data.elapsed_seconds}с
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const sorted = [...data.accounts].sort((a, b) => b.confidence - a.confidence);
+
+    let html = `
+      <div class="results-header">
+        <h2>✅ Найдено: ${data.total_found}</h2>
+        <span>${data.checked} платформ · ${data.elapsed_seconds}с</span>
+      </div>
+    `;
+
+    for (const acc of sorted) {
+      const confClass = acc.confidence >= 0.8 ? 'high' : acc.confidence >= 0.5 ? 'medium' : 'low';
+      const initial = acc.platform.charAt(0).toUpperCase();
+      const color = stringToColor(acc.platform);
+
+      html += `
+        <a href="${escapeHtml(acc.url)}" target="_blank" style="text-decoration:none;color:inherit">
+          <div class="account-card">
+            <div class="icon" style="background:${color}20;color:${color}">${initial}</div>
+            <div class="info">
+              <div class="platform">${escapeHtml(acc.platform)}</div>
+              <div class="username">@${escapeHtml(acc.username)}</div>
+            </div>
+            <div class="confidence ${confClass}">${Math.round(acc.confidence * 100)}%</div>
+          </div>
+        </a>
+      `;
+    }
+
+    results.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = ['#64b5f6', '#81c784', '#ffb74d', '#e57373', '#ba68c8', '#4dd0e1', '#ff8a65', '#a1887f'];
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  // Enter key
+  document.getElementById('username').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') search();
+  });
+</script>
+</body>
+</html>

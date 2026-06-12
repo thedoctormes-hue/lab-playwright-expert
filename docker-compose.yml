@@ -1,0 +1,263 @@
+# ============================================================
+# Docker Compose — Screenshot-as-a-Service (lab-playwright-expert)
+# ============================================================
+# Использование:
+#   docker compose up -d                   # запуск сервиса
+#   docker compose --profile monitoring up -d  # + мониторинг
+#   docker compose down                    # остановка
+#   docker compose logs -f                 # логи
+#   docker compose ps                      # статус
+#   docker compose exec screenshot-service sh  # shell в контейнер
+# ============================================================
+
+
+services:
+  # ═══════════════════════════════════════════════════════════
+  # Screenshot Service (основной)
+  # ═══════════════════════════════════════════════════════════
+  screenshot-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Multi-arch поддержка через buildx:
+      # docker buildx bake
+      platforms:
+        - "linux/amd64"
+        - "linux/arm64"
+    image: lab-playwright-expert:${VERSION:-latest}
+    container_name: screenshot-service
+    restart: unless-stopped
+
+    ports:
+      - "${SCREENSHOT_PORT:-8190}:8190"
+
+    environment:
+      - SCREENSHOT_SERVICE_TOKEN=${SCREENSHOT_SERVICE_TOKEN}
+      - CACHE_DIR=/tmp/screenshot_cache
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - PYTHONUNBUFFERED=1
+      - RATE_LIMIT_ANONYMOUS=${RATE_LIMIT_ANONYMOUS:-100}
+      - RATE_LIMIT_AUTHENTICATED=${RATE_LIMIT_AUTHENTICATED:-1000}
+
+    env_file:
+      - .env
+
+    volumes:
+      - screenshot-cache:/tmp/screenshot_cache
+      - ./config:/app/config:ro
+
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8190/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "screenshot-service"
+
+    networks:
+      - frontend
+      - backend
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - SYS_ADMIN    # для Chromium sandbox (user namespaces)
+    ulimits:
+      nproc: 128
+      nofile:
+        soft: 1024
+        hard: 2048
+    tmpfs:
+      - /tmp:size=256M,noexec,nosuid,uid=1001,gid=1001
+
+  # ═══════════════════════════════════════════════════════════
+  # Prometheus (мониторинг)
+  # ═══════════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    restart: unless-stopped
+
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.size=5GB"
+      - "--web.enable-lifecycle"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+    networks:
+      - backend
+
+    profiles:
+      - monitoring
+
+  # ═══════════════════════════════════════════════════════════
+  # Grafana (дашборды)
+  # ═══════════════════════════════════════════════════════════
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    restart: unless-stopped
+
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+        reservations:
+          memory: 64M
+          cpus: "0.05"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+    networks:
+      - backend
+
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+    profiles:
+      - monitoring
+
+  # ═══════════════════════════════════════════════════════════
+  # Node Exporter (метрики хоста)
+  # ═══════════════════════════════════════════════════════════
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: node-exporter
+    restart: unless-stopped
+
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.1"
+
+    networks:
+      - backend
+
+    profiles:
+      - monitoring
+
+# ═══════════════════════════════════════════════════════════
+# Volumes
+# ═══════════════════════════════════════════════════════════
+volumes:
+  screenshot-cache:
+    driver: local
+    labels:
+      project: "lab-playwright-expert"
+
+  prometheus-data:
+    driver: local
+    labels:
+      project: "lab-playwright-expert"
+
+  grafana-data:
+    driver: local
+    labels:
+      project: "lab-playwright-expert"
+
+# ═══════════════════════════════════════════════════════════
+# Networks
+# ═══════════════════════════════════════════════════════════
+networks:
+  frontend:
+    driver: bridge
+    labels:
+      project: "lab-playwright-expert"
+
+  backend:
+    driver: bridge
+    internal: true  # нет доступа в интернет
+    labels:
+      project: "lab-playwright-expert"
