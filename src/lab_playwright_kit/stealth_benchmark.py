@@ -38,7 +38,7 @@ from lab_playwright_kit.stealth import StealthConfig, apply_stealth
 
 
 @dataclass
-class TestResult:
+class BenchmarkTestResult:
     """Результат одного теста антибот-системы.
 
     Attributes:
@@ -47,6 +47,7 @@ class TestResult:
         value: Значение, которое увидела антибот-система.
         expected: Ожидаемое значение.
     """
+    __test__ = False
     name: str
     passed: bool
     value: str = ""
@@ -55,6 +56,7 @@ class TestResult:
 
 @dataclass
 class BenchmarkResult:
+    __test__ = False
     """Результат полного бенчмарка stealth.
 
     Attributes:
@@ -71,7 +73,7 @@ class BenchmarkResult:
     passed: int = 0
     failed: int = 0
     total: int = 0
-    details: list[TestResult] = field(default_factory=list)
+    details: list[BenchmarkTestResult] = field(default_factory=list)
     duration_ms: float = 0.0
     url: str = ""
     error: str | None = None
@@ -218,7 +220,7 @@ class StealthBenchmark:
                 cell_html = await value_cell.inner_html()
                 passed = self._is_passed(cell_html, value)
 
-                result.details.append(TestResult(
+                result.details.append(BenchmarkTestResult(
                     name=name,
                     passed=passed,
                     value=value,
@@ -302,3 +304,7 @@ async def run_benchmark(
     """
     benchmark = StealthBenchmark(config=config, url=url)
     return await benchmark.run()
+
+
+# Backward compatibility aliases
+TestResult = BenchmarkTestResult

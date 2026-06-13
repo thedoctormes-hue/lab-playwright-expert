@@ -191,10 +191,6 @@ class TestCloakBrowserEngine:
             f"Platform mismatch: {results[0][1]} vs {results[1][1]}"
         )
 
-    @pytest.mark.xfail(
-        reason="CloakBrowser persistent_context crashes with SIGSEGV (known bug in cloakbrowser)",
-        strict=False,
-    )
     def test_cloakbrowser_persistent_context(self):
         """Persistent context: cookies survive between restarts (same profile_dir).
 

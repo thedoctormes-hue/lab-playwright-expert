@@ -193,6 +193,7 @@ RATE_LIMITER_TTL = 3600
 
 
 def _cleanup_rate_limiters():
+    """Remove stale rate limiters that haven't been accessed within TTL."""
     now = time.monotonic()
     stale = [cid for cid, last in _rate_limiters_last_access.items() if now - last > RATE_LIMITER_TTL]
     for cid in stale:
@@ -202,9 +203,13 @@ def _cleanup_rate_limiters():
         logger.debug(f'Cleaned up {len(stale)} stale rate limiters')
 
 
+_MAX_RATE_LIMITERS = 10000
+
+
 def _get_rate_limiter(client_id: str, authenticated: bool) -> _TokenBucket:
     if client_id not in _rate_limiters:
-        if secrets.randbelow(100) == 0:
+        # Evict stale entries when map grows too large
+        if len(_rate_limiters) >= _MAX_RATE_LIMITERS:
             _cleanup_rate_limiters()
         limit = RATE_LIMIT_AUTHENTICATED if authenticated else RATE_LIMIT_ANONYMOUS
         _rate_limiters[client_id] = _TokenBucket(

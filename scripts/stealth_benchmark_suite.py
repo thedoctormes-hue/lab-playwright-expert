@@ -49,7 +49,7 @@ from lab_playwright_kit.human_behavior import HumanBehaviorEngine, BehaviorProfi
 
 # ─── Модель данных ──────────────────────────────────────────────────────────
 
-class TestStatus(str, Enum):
+class BenchmarkTestStatus(str, Enum):
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"
@@ -61,7 +61,7 @@ class StealthTestResult:
     """Результат одного теста."""
     name: str
     category: str
-    status: TestStatus
+    status: BenchmarkTestStatus
     score: float
     details: str = ""
     duration_ms: float = 0.0
@@ -183,7 +183,7 @@ async def test_fingerprint_generation() -> StealthTestResult:
         return StealthTestResult(
             name="Fingerprint Generation",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -192,7 +192,7 @@ async def test_fingerprint_generation() -> StealthTestResult:
         return StealthTestResult(
             name="Fingerprint Generation",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -220,7 +220,7 @@ async def test_fingerprint_determinism() -> StealthTestResult:
         return StealthTestResult(
             name="Fingerprint Determinism",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -229,7 +229,7 @@ async def test_fingerprint_determinism() -> StealthTestResult:
         return StealthTestResult(
             name="Fingerprint Determinism",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -253,7 +253,7 @@ async def test_fingerprint_uniqueness() -> StealthTestResult:
         return StealthTestResult(
             name="Fingerprint Uniqueness",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -262,7 +262,7 @@ async def test_fingerprint_uniqueness() -> StealthTestResult:
         return StealthTestResult(
             name="Fingerprint Uniqueness",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -298,7 +298,7 @@ async def test_canvas_spoofing_active(page) -> StealthTestResult:
         return StealthTestResult(
             name="Canvas Spoofing Active",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"Canvas dataURL length={result.get('length')}, hasContent={result.get('hasContent')}",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -307,7 +307,7 @@ async def test_canvas_spoofing_active(page) -> StealthTestResult:
         return StealthTestResult(
             name="Canvas Spoofing Active",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -350,7 +350,7 @@ async def test_canvas_noise_consistency(page) -> StealthTestResult:
         return StealthTestResult(
             name="Canvas Noise Consistency",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -359,7 +359,7 @@ async def test_canvas_noise_consistency(page) -> StealthTestResult:
         return StealthTestResult(
             name="Canvas Noise Consistency",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -390,7 +390,7 @@ async def test_webgl_spoofing(page) -> StealthTestResult:
             return StealthTestResult(
                 name="WebGL Spoofing",
                 category="fingerprint",
-                status=TestStatus.SKIPPED,
+                status=BenchmarkTestStatus.SKIPPED,
                 score=0,
                 details=result["error"],
                 duration_ms=(time.monotonic() - start) * 1000,
@@ -412,7 +412,7 @@ async def test_webgl_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="WebGL Spoofing",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -421,7 +421,7 @@ async def test_webgl_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="WebGL Spoofing",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -467,7 +467,7 @@ async def test_audio_spoofing(page) -> StealthTestResult:
             return StealthTestResult(
                 name="Audio Spoofing",
                 category="fingerprint",
-                status=TestStatus.ERROR,
+                status=BenchmarkTestStatus.ERROR,
                 score=0,
                 details=result["error"],
                 duration_ms=(time.monotonic() - start) * 1000,
@@ -480,7 +480,7 @@ async def test_audio_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="Audio Spoofing",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else (TestStatus.PASSED if score >= 50 else TestStatus.FAILED),
+            status=BenchmarkTestStatus.PASSED if score == 100 else (BenchmarkTestStatus.PASSED if score >= 50 else BenchmarkTestStatus.FAILED),
             score=score,
             details=f"FFT avg={result.get('avg')} dB, allFinite={all_finite}, allInRange={all_in_range}, sample={result.get('values')}",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -489,7 +489,7 @@ async def test_audio_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="Audio Spoofing",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -527,7 +527,7 @@ async def test_screen_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="Screen Spoofing",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -536,7 +536,7 @@ async def test_screen_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="Screen Spoofing",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -572,7 +572,7 @@ async def test_hardware_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="Hardware Spoofing",
             category="fingerprint",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -581,7 +581,7 @@ async def test_hardware_spoofing(page) -> StealthTestResult:
         return StealthTestResult(
             name="Hardware Spoofing",
             category="fingerprint",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -602,7 +602,7 @@ async def test_mouse_movement(page) -> StealthTestResult:
         return StealthTestResult(
             name="Mouse Movement",
             category="behavior",
-            status=TestStatus.PASSED,
+            status=BenchmarkTestStatus.PASSED,
             score=score,
             details="move_mouse_to(500, 300) выполнен без ошибок",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -611,7 +611,7 @@ async def test_mouse_movement(page) -> StealthTestResult:
         return StealthTestResult(
             name="Mouse Movement",
             category="behavior",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -633,7 +633,7 @@ async def test_scroll_behavior(page) -> StealthTestResult:
         return StealthTestResult(
             name="Scroll Behavior",
             category="behavior",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"scrollY={scroll_y} после scroll_down(0.5)",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -642,7 +642,7 @@ async def test_scroll_behavior(page) -> StealthTestResult:
         return StealthTestResult(
             name="Scroll Behavior",
             category="behavior",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -662,7 +662,7 @@ async def test_type_text(page) -> StealthTestResult:
         return StealthTestResult(
             name="Type Text",
             category="behavior",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"Введённый текст: '{value}' (expected 'Hello World')",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -671,7 +671,7 @@ async def test_type_text(page) -> StealthTestResult:
         return StealthTestResult(
             name="Type Text",
             category="behavior",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -696,7 +696,7 @@ async def test_behavior_profiles() -> StealthTestResult:
         return StealthTestResult(
             name="Behavior Profiles",
             category="behavior",
-            status=TestStatus.PASSED if all_ok else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if all_ok else BenchmarkTestStatus.FAILED,
             score=score,
             details=str(results),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -705,7 +705,7 @@ async def test_behavior_profiles() -> StealthTestResult:
         return StealthTestResult(
             name="Behavior Profiles",
             category="behavior",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -733,7 +733,7 @@ async def test_bezier_mouse_trajectory() -> StealthTestResult:
         return StealthTestResult(
             name="Bezier Mouse Trajectory",
             category="behavior",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -742,7 +742,7 @@ async def test_bezier_mouse_trajectory() -> StealthTestResult:
         return StealthTestResult(
             name="Bezier Mouse Trajectory",
             category="behavior",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -779,7 +779,7 @@ async def test_webrtc_block_all(page) -> StealthTestResult:
             return StealthTestResult(
                 name="WebRTC Block All",
                 category="network",
-                status=TestStatus.ERROR,
+                status=BenchmarkTestStatus.ERROR,
                 score=0,
                 details=result["error"],
                 duration_ms=(time.monotonic() - start) * 1000,
@@ -790,7 +790,7 @@ async def test_webrtc_block_all(page) -> StealthTestResult:
         return StealthTestResult(
             name="WebRTC Block All",
             category="network",
-            status=TestStatus.PASSED if is_fake else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if is_fake else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"exists={result.get('exists')}, connectionState={result.get('connectionState')}, isFake={is_fake}",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -799,7 +799,7 @@ async def test_webrtc_block_all(page) -> StealthTestResult:
         return StealthTestResult(
             name="WebRTC Block All",
             category="network",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -832,7 +832,7 @@ async def test_webrtc_filter_host(page) -> StealthTestResult:
             return StealthTestResult(
                 name="WebRTC Filter Host",
                 category="network",
-                status=TestStatus.ERROR,
+                status=BenchmarkTestStatus.ERROR,
                 score=0,
                 details=result["error"],
                 duration_ms=(time.monotonic() - start) * 1000,
@@ -843,7 +843,7 @@ async def test_webrtc_filter_host(page) -> StealthTestResult:
         return StealthTestResult(
             name="WebRTC Filter Host",
             category="network",
-            status=TestStatus.PASSED if works else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if works else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"RTCPeerConnection работает: {result}",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -852,7 +852,7 @@ async def test_webrtc_filter_host(page) -> StealthTestResult:
         return StealthTestResult(
             name="WebRTC Filter Host",
             category="network",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -884,7 +884,7 @@ async def test_client_hints_consistency(page) -> StealthTestResult:
             return StealthTestResult(
                 name="Client Hints Consistency",
                 category="network",
-                status=TestStatus.SKIPPED,
+                status=BenchmarkTestStatus.SKIPPED,
                 score=0,
                 details=result["error"],
                 duration_ms=(time.monotonic() - start) * 1000,
@@ -909,7 +909,7 @@ async def test_client_hints_consistency(page) -> StealthTestResult:
         return StealthTestResult(
             name="Client Hints Consistency",
             category="network",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -918,7 +918,7 @@ async def test_client_hints_consistency(page) -> StealthTestResult:
         return StealthTestResult(
             name="Client Hints Consistency",
             category="network",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -950,7 +950,7 @@ async def test_client_hints_high_entropy(page) -> StealthTestResult:
             return StealthTestResult(
                 name="Client Hints High Entropy",
                 category="network",
-                status=TestStatus.ERROR,
+                status=BenchmarkTestStatus.ERROR,
                 score=0,
                 details=result["error"],
                 duration_ms=(time.monotonic() - start) * 1000,
@@ -969,7 +969,7 @@ async def test_client_hints_high_entropy(page) -> StealthTestResult:
         return StealthTestResult(
             name="Client Hints High Entropy",
             category="network",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -978,7 +978,7 @@ async def test_client_hints_high_entropy(page) -> StealthTestResult:
         return StealthTestResult(
             name="Client Hints High Entropy",
             category="network",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1001,7 +1001,7 @@ async def test_stealth_webdriver_hidden(page) -> StealthTestResult:
         return StealthTestResult(
             name="Webdriver Hidden",
             category="consistency",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"navigator.webdriver = {result}",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1010,7 +1010,7 @@ async def test_stealth_webdriver_hidden(page) -> StealthTestResult:
         return StealthTestResult(
             name="Webdriver Hidden",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1040,7 +1040,7 @@ async def test_stealth_plugins_populated(page) -> StealthTestResult:
         return StealthTestResult(
             name="Plugins Populated",
             category="consistency",
-            status=TestStatus.PASSED if length >= 3 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if length >= 3 else BenchmarkTestStatus.FAILED,
             score=min(score, 100.0),
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1049,7 +1049,7 @@ async def test_stealth_plugins_populated(page) -> StealthTestResult:
         return StealthTestResult(
             name="Plugins Populated",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1071,7 +1071,7 @@ async def test_stealth_languages(page) -> StealthTestResult:
         return StealthTestResult(
             name="Languages Realistic",
             category="consistency",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1080,7 +1080,7 @@ async def test_stealth_languages(page) -> StealthTestResult:
         return StealthTestResult(
             name="Languages Realistic",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1103,7 +1103,7 @@ async def test_stealth_permissions(page) -> StealthTestResult:
         return StealthTestResult(
             name="Permissions API",
             category="consistency",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=f"notifications.state = {result}",
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1112,7 +1112,7 @@ async def test_stealth_permissions(page) -> StealthTestResult:
         return StealthTestResult(
             name="Permissions API",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1143,7 +1143,7 @@ async def test_stealth_chrome_runtime(page) -> StealthTestResult:
         return StealthTestResult(
             name="Chrome Runtime",
             category="consistency",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=str(result),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1152,7 +1152,7 @@ async def test_stealth_chrome_runtime(page) -> StealthTestResult:
         return StealthTestResult(
             name="Chrome Runtime",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1221,7 +1221,7 @@ async def test_full_integration(page) -> StealthTestResult:
         return StealthTestResult(
             name="Full Integration",
             category="consistency",
-            status=TestStatus.PASSED if score >= 75 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score >= 75 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1230,7 +1230,7 @@ async def test_full_integration(page) -> StealthTestResult:
         return StealthTestResult(
             name="Full Integration",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1261,7 +1261,7 @@ async def test_stealth_levels() -> StealthTestResult:
         return StealthTestResult(
             name="Stealth Levels",
             category="consistency",
-            status=TestStatus.PASSED if score == 100 else TestStatus.FAILED,
+            status=BenchmarkTestStatus.PASSED if score == 100 else BenchmarkTestStatus.FAILED,
             score=score,
             details=details,
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1270,7 +1270,7 @@ async def test_stealth_levels() -> StealthTestResult:
         return StealthTestResult(
             name="Stealth Levels",
             category="consistency",
-            status=TestStatus.ERROR,
+            status=BenchmarkTestStatus.ERROR,
             score=0,
             details=str(e),
             duration_ms=(time.monotonic() - start) * 1000,
@@ -1330,18 +1330,18 @@ def generate_html_report(report: SuiteReport, output_dir: str) -> str:
         else:
             return "#ef4444"
 
-    def status_badge(status: TestStatus) -> str:
+    def status_badge(status: BenchmarkTestStatus) -> str:
         colors = {
-            TestStatus.PASSED: "#22c55e",
-            TestStatus.FAILED: "#ef4444",
-            TestStatus.SKIPPED: "#6b7280",
-            TestStatus.ERROR: "#f97316",
+            BenchmarkTestStatus.PASSED: "#22c55e",
+            BenchmarkTestStatus.FAILED: "#ef4444",
+            BenchmarkTestStatus.SKIPPED: "#6b7280",
+            BenchmarkTestStatus.ERROR: "#f97316",
         }
         labels = {
-            TestStatus.PASSED: "✅ PASSED",
-            TestStatus.FAILED: "❌ FAILED",
-            TestStatus.SKIPPED: "⏭ SKIPPED",
-            TestStatus.ERROR: "⚠️ ERROR",
+            BenchmarkTestStatus.PASSED: "✅ PASSED",
+            BenchmarkTestStatus.FAILED: "❌ FAILED",
+            BenchmarkTestStatus.SKIPPED: "⏭ SKIPPED",
+            BenchmarkTestStatus.ERROR: "⚠️ ERROR",
         }
         color = colors.get(status, "#6b7280")
         label = labels.get(status, str(status))
@@ -1536,7 +1536,7 @@ async def run_suite(
             unit_results[category].append(StealthTestResult(
                 name=test_func.__name__,
                 category=category,
-                status=TestStatus.ERROR,
+                status=BenchmarkTestStatus.ERROR,
                 score=0,
                 details=str(e),
             ))
@@ -1571,7 +1571,7 @@ async def run_suite(
                     browser_results[category].append(StealthTestResult(
                         name=test_name,
                         category=category,
-                        status=TestStatus.ERROR,
+                        status=BenchmarkTestStatus.ERROR,
                         score=0,
                         details=str(e),
                     ))
@@ -1598,8 +1598,8 @@ async def run_suite(
         total_score = sum(r.score for r in all_results)
         avg_score = total_score / len(all_results)
 
-        passed = sum(1 for r in all_results if r.status == TestStatus.PASSED)
-        failed = sum(1 for r in all_results if r.status in (TestStatus.FAILED, TestStatus.ERROR))
+        passed = sum(1 for r in all_results if r.status == BenchmarkTestStatus.PASSED)
+        failed = sum(1 for r in all_results if r.status in (BenchmarkTestStatus.FAILED, BenchmarkTestStatus.ERROR))
 
         report.categories.append(CategoryScore(
             name=category_name,
@@ -1700,3 +1700,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Backward compatibility aliases
+TestStatus = BenchmarkTestStatus

@@ -131,7 +131,7 @@ class BaseTask(ABC):
 
     async def _ensure_page(self) -> Page:
         if self._page is None:
-            ctx = await self._browser_mgr.get_context()
+            ctx = self._browser_mgr.context
             self._page = await ctx.new_page()
         return self._page
 
@@ -205,8 +205,13 @@ class BaseTask(ABC):
         """Получить имя задачи."""
         ...
 
-    async def run(self, **kwargs) -> TaskContext:
-        """Запустить задачу (Template Method)."""
+    async def run(self, steps: list[TaskStep] | None = None, **kwargs) -> TaskContext:
+        """Запустить задачу (Template Method).
+
+        Args:
+            steps: Опциональный список шагов. Если None — берётся из get_steps().
+            **kwargs: Дополнительные параметры контекста.
+        """
         import uuid
 
         ctx = TaskContext(
@@ -224,7 +229,8 @@ class BaseTask(ABC):
             # Pre-run hook
             await self._pre_run(ctx)
 
-            steps = self.get_steps()
+            if steps is None:
+                steps = self.get_steps()
             ctx.total_steps = len(steps)
 
             for i, step in enumerate(steps):
@@ -371,7 +377,7 @@ class SocialMediaTask(BaseTask):
                 post_delay=1.0,
             ),
         ]
-        return await self.run(url=url, action="like")
+        return await self.run(steps=steps, url=url, action="like")
 
     async def follow_user(self, url: str) -> TaskContext:
         """Подписаться на пользователя."""
@@ -389,7 +395,7 @@ class SocialMediaTask(BaseTask):
                 on_fail="abort",
             ),
         ]
-        return await self.run(url=url, action="follow")
+        return await self.run(steps=steps, url=url, action="follow")
 
     async def mass_follow(self, urls: list[str], delay_range: tuple[float, float] = (5.0, 15.0)) -> list[TaskContext]:
         """Массовая подписка с рандомными задержками."""
