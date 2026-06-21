@@ -1,6 +1,10 @@
 # 🥷 Lab Playwright Kit
 
-> **v2.1** — Продвинутый фреймворк для автоматизации браузера на базе Playwright.
+> **Владелец:** DoctorM&Ai | **Статус:** active | **Версия:** 2.1.0
+
+## Описание
+
+Продвинутый фреймворк для автоматизации браузера на базе Playwright. 376 тестов, поддержка Python 3.10+ и Playwright 1.50+. Лаборатория DoctorM&Ai.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![Playwright](https://img.shields.io/badge/playwright-1.50%2B-green)](https://playwright.dev/)
