@@ -7,7 +7,6 @@
 | **Статус** | 🟢 active |
 | **Путь** | `/root/LabDoctorM/projects/lab-playwright-expert` |
 | **Тип** | framework |
-| **Владелец** | ant |
 | **Приоритет** | medium |
 | **Стек** | Python, Playwright, Docker |
 

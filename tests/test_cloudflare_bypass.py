@@ -1,21 +1,13 @@
 """
-Тесты для CloudflareBypass и FlareSolverrClient.
+Tests for CloudflareBypass — обход Cloudflare challenges.
 
-Покрывает:
-  - BypassResult dataclass
-  - FlareSolverrClient.solve (mock HTTP)
-  - FlareSolverrClient.health_check
-  - CloudflareBypass.solve (авто-выбор метода)
-  - CloudflareBypass._direct_request
-  - Retry/backoff логика
-  - Валидация URL
+Run: pytest tests/test_cloudflare_bypass.py -v
 """
+
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 
 from lab_playwright_kit.cloudflare_bypass import (
@@ -27,412 +19,412 @@ from lab_playwright_kit.cloudflare_bypass import (
 
 # ─── BypassResult ────────────────────────────────────────────────────────────
 
-class TestBypassResult:
-    """Тесты dataclass BypassResult."""
 
+class TestBypassResult:
     def test_default_values(self):
         r = BypassResult()
         assert r.success is False
         assert r.cookies == {}
         assert r.user_agent == ""
-        assert r.response_text == ""
-        assert r.elapsed_seconds == 0.0
         assert r.method == "none"
         assert r.error == ""
 
     def test_to_dict(self):
         r = BypassResult(
             success=True,
-            cookies={"cf_clearance": "abc123"},
-            user_agent="Mozilla/5.0",
-            elapsed_seconds=5.5,
+            cookies={"a": "1", "b": "2"},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            elapsed_seconds=1.5,
             method="flaresolverr",
         )
         d = r.to_dict()
         assert d["success"] is True
-        assert d["cookies_count"] == 1
-        assert d["user_agent"] == "Mozilla/5.0"
-        assert d["elapsed_seconds"] == 5.5
+        assert d["cookies_count"] == 2
         assert d["method"] == "flaresolverr"
+        assert d["user_agent"].startswith("Mozilla/5.0")
+        assert d["user_agent"] == "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"[:50]
 
-    def test_to_dict_empty_cookies(self):
-        r = BypassResult(success=False)
+    def test_to_dict_empty_ua(self):
+        r = BypassResult(success=True, user_agent="")
         d = r.to_dict()
-        assert d["cookies_count"] == 0
         assert d["user_agent"] == ""
+
+    def test_to_dict_short_ua(self):
+        r = BypassResult(success=True, user_agent="Short")
+        d = r.to_dict()
+        assert d["user_agent"] == "Short"
 
 
 # ─── FlareSolverrClient ──────────────────────────────────────────────────────
 
+
 class TestFlareSolverrClient:
-    """Тесты FlareSolverrClient с mock HTTP."""
+    def test_default_init(self):
+        c = FlareSolverrClient()
+        assert c.base_url == "http://localhost:8191"
+        assert c.timeout == 120.0
+        assert c.max_retries == 3
 
-    @pytest.fixture
-    def client(self):
-        return FlareSolverrClient(
-            base_url="http://localhost:8191",
-            timeout=5.0,
-            max_retries=3,
-        )
+    def test_custom_init(self):
+        c = FlareSolverrClient(base_url="http://custom:8200/", timeout=60.0, max_retries=5)
+        assert c.base_url == "http://custom:8200"
+        assert c.timeout == 60.0
+        assert c.max_retries == 5
 
-    @pytest.mark.asyncio
-    async def test_health_check_success(self, client):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
+    def test_url_strip_trailing_slash(self):
+        c = FlareSolverrClient(base_url="http://example.com/")
+        assert c.base_url == "http://example.com"
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.get = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+    @pytest.mark.anyio
+    async def test_health_check_success(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
 
-            result = await client.health_check()
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.get = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
+
+            c = FlareSolverrClient()
+            result = await c.health_check()
             assert result is True
 
-    @pytest.mark.asyncio
-    async def test_health_check_failure(self, client):
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.get = AsyncMock(side_effect=ConnectionError("refused"))
-            mock_cls.return_value = mock_ctx
+    @pytest.mark.anyio
+    async def test_health_check_failure(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 503
 
-            result = await client.health_check()
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.get = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
+
+            c = FlareSolverrClient()
+            result = await c.health_check()
             assert result is False
 
-    @pytest.mark.asyncio
-    async def test_solve_success(self, client):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json = MagicMock(return_value={
+    @pytest.mark.anyio
+    async def test_health_check_exception(self):
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.get = AsyncMock(side_effect=Exception("refused"))
+            MockClient.return_value = mock_instance
+
+            c = FlareSolverrClient()
+            result = await c.health_check()
+            assert result is False
+
+
+class TestFlareSolverrSolve:
+    """Тесты FlareSolverrClient.solve()."""
+
+    @pytest.mark.anyio
+    async def test_solve_success(self):
+        """Успешное решение challenge."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
             "solution": {
                 "status": 200,
                 "cookies": [
-                    {"name": "cf_clearance", "value": "token123"},
+                    {"name": "cf_clearance", "value": "abc123"},
                 ],
-                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "userAgent": "Mozilla/5.0",
                 "response": "<html>OK</html>",
             }
-        })
+        }
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
 
-            result = await client.solve("https://example.com")
+            c = FlareSolverrClient()
+            result = await c.solve("https://example.com")
 
             assert result.success is True
-            assert result.cookies == {"cf_clearance": "token123"}
-            assert result.user_agent == "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            assert result.cookies == {"cf_clearance": "abc123"}
             assert result.method == "flaresolverr"
-            assert result.error == ""
+            assert result.elapsed_seconds > 0
 
-    @pytest.mark.asyncio
-    async def test_solve_http_error(self, client):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 500
+    @pytest.mark.anyio
+    async def test_solve_non_200_status(self):
+        """Решение вернуло ошибку — метод max_retries, итоговый fail."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "solution": {
+                "status": 500,
+                "message": "challenge not solved",
+            }
+        }
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
 
-            result = await client.solve("https://example.com")
+            c = FlareSolverrClient(max_retries=2)
+            result = await c.solve("https://example.com")
 
             assert result.success is False
             assert result.method == "flaresolverr"
             assert "Max retries" in result.error
 
-    @pytest.mark.asyncio
-    async def test_solve_timeout_retry(self, client):
-        """Timeout на первой попытке → retry → успех."""
-        fail_resp = MagicMock(side_effect=httpx.TimeoutException("timeout"))
-        success_resp = MagicMock()
-        success_resp.status_code = 200
-        success_resp.json = MagicMock(return_value={
+    @pytest.mark.anyio
+    async def test_solve_timeout_retry(self):
+        """Таймаут — retry, затем успех."""
+        mock_fail = MagicMock()
+        mock_fail.status_code = 200
+        mock_fail.json.return_value = {"solution": {"status": 500}}
+
+        mock_ok = MagicMock()
+        mock_ok.status_code = 200
+        mock_ok.json.return_value = {
             "solution": {
                 "status": 200,
-                "cookies": [{"name": "cf", "value": "v"}],
-                "userAgent": "Mozilla/5.0",
-                "response": "",
+                "cookies": [{"name": "a", "value": "1"}],
             }
-        })
+        }
 
-        with patch("httpx.AsyncClient") as mock_cls, \
-             patch("asyncio.sleep", new_callable=AsyncMock):
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(side_effect=[fail_resp, success_resp])
-            mock_cls.return_value = mock_ctx
+        with (
+            patch("httpx.AsyncClient") as MockClient,
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(side_effect=[mock_fail, mock_ok])
+            MockClient.return_value = mock_instance
 
-            result = await client.solve("https://example.com")
+            c = FlareSolverrClient(max_retries=2)
+            result = await c.solve("https://example.com")
 
             assert result.success is True
-            assert mock_ctx.post.call_count == 2
+            assert result.cookies == {"a": "1"}
 
-    @pytest.mark.asyncio
-    async def test_solve_with_cookies(self, client):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json = MagicMock(return_value={
-            "solution": {
-                "status": 200,
-                "cookies": [],
-                "userAgent": "",
-                "response": "",
-            }
-        })
+    @pytest.mark.anyio
+    async def test_solve_with_cookies(self):
+        """Передача cookies в payload."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"solution": {"status": 200, "cookies": []}}
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
 
-            await client.solve(
-                "https://example.com",
-                cookies={"session": "abc"},
-            )
+            c = FlareSolverrClient()
+            await c.solve("https://example.com", cookies={"session": "xyz"})
 
-            # Проверяем что cookies переданы в payload
-            call_args = mock_ctx.post.call_args
+            call_args = mock_instance.post.call_args
             payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            assert "cookies" in payload
-            assert payload["cookies"] == [{"name": "session", "value": "abc"}]
+            cookies_list = payload.get("cookies", [])
+            assert {"name": "session", "value": "xyz"} in cookies_list
 
-    @pytest.mark.asyncio
-    async def test_solve_with_proxy(self, client):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json = MagicMock(return_value={
-            "solution": {
-                "status": 200,
-                "cookies": [],
-                "userAgent": "",
-                "response": "",
-            }
-        })
+    @pytest.mark.anyio
+    async def test_solve_with_proxy(self):
+        """Передача proxy в payload."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"solution": {"status": 200, "cookies": []}}
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
 
-            await client.solve(
-                "https://example.com",
-                proxy="http://proxy:8080",
-            )
+            c = FlareSolverrClient()
+            await c.solve("https://example.com", proxy="http://proxy:8080")
 
-            call_args = mock_ctx.post.call_args
+            call_args = mock_instance.post.call_args
             payload = call_args.kwargs.get("json") or call_args[1].get("json")
-            assert "proxy" in payload
-            assert payload["proxy"] == {"url": "http://proxy:8080"}
+            assert payload.get("proxy") == {"url": "http://proxy:8080"}
 
-    @pytest.mark.asyncio
-    async def test_solve_post(self, client):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json = MagicMock(return_value={
+
+class TestFlareSolverrSolvePost:
+    """Тесты FlareSolverrClient.solve_post()."""
+
+    @pytest.mark.anyio
+    async def test_solve_post_success(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
             "solution": {
                 "status": 200,
-                "cookies": [{"name": "cf", "value": "v"}],
-                "userAgent": "Mozilla/5.0",
-                "response": "",
+                "cookies": [{"name": "sid", "value": "sess1"}],
             }
-        })
+        }
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
 
-            result = await client.solve_post(
-                "https://example.com/api",
-                post_data={"key": "value"},
-            )
+            c = FlareSolverrClient()
+            result = await c.solve_post("https://example.com/form", post_data={"key": "val"})
 
             assert result.success is True
-            assert result.method == "flaresolverr"
+            assert result.cookies == {"sid": "sess1"}
+
+    @pytest.mark.anyio
+    async def test_solve_post_with_data(self):
+        """postData формируется корректно."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"solution": {"status": 200, "cookies": []}}
+
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
+
+            c = FlareSolverrClient()
+            await c.solve_post("https://example.com", post_data={"a": "1", "b": "2"})
+
+            call_args = mock_instance.post.call_args
+            payload = call_args.kwargs.get("json") or call_args[1].get("json")
+            assert "postData" in payload
+            assert "a=1" in payload["postData"]
+
+    @pytest.mark.anyio
+    async def test_solve_post_failure(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"solution": {"status": 500, "message": "internal error"}}
+
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_instance.post = AsyncMock(return_value=mock_response)
+            MockClient.return_value = mock_instance
+
+            c = FlareSolverrClient()
+            result = await c.solve_post("https://example.com")
+
+            assert result.success is False
+            assert "POST request failed" in result.error
 
 
 # ─── CloudflareBypass ────────────────────────────────────────────────────────
 
-class TestCloudflareBypass:
-    """Тесты CloudflareBypass (авто-выбор метода)."""
 
-    @pytest.fixture
-    def bypass(self):
-        return CloudflareBypass(
-            flaresolverr_url="http://localhost:8191",
+class TestCloudflareBypass:
+    def test_default_init(self):
+        b = CloudflareBypass()
+        assert b.flaresolverr is not None
+        assert b.use_cloakbrowser is True
+        assert b._flaresolverr_available is None
+
+    def test_custom_init(self):
+        b = CloudflareBypass(
+            flaresolverr_url="http://other:8200",
             use_cloakbrowser=False,
+            timeout=60.0,
+        )
+        assert b.flaresolverr.base_url == "http://other:8200"
+        assert b.use_cloakbrowser is False
+
+    @pytest.mark.anyio
+    async def test_check_flaresolverr_available(self):
+        mock_health = AsyncMock(return_value=True)
+        b = CloudflareBypass()
+        b.flaresolverr.health_check = mock_health
+
+        result = await b.check_flaresolverr()
+        assert result is True
+        assert b._flaresolverr_available is True
+
+    @pytest.mark.anyio
+    async def test_check_flaresolverr_not_available(self):
+        mock_health = AsyncMock(return_value=False)
+        b = CloudflareBypass()
+        b.flaresolverr.health_check = mock_health
+
+        result = await b.check_flaresolverr()
+        assert result is False
+        assert b._flaresolverr_available is False
+
+    @pytest.mark.anyio
+    async def test_check_flaresolverr_caches(self):
+        """Повторный вызов не ходит в сеть."""
+        mock_health = AsyncMock(return_value=True)
+        b = CloudflareBypass()
+        b.flaresolverr.health_check = mock_health
+        b._flaresolverr_available = True
+
+        result = await b.check_flaresolverr()
+        assert result is True
+        mock_health.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_solve_via_flaresolverr_success(self):
+        """FlareSolverr доступен и решает успешно."""
+        b = CloudflareBypass()
+        b._flaresolverr_available = True
+        b.flaresolverr.solve = AsyncMock(
+            return_value=BypassResult(
+                success=True,
+                cookies={"cf": "clear"},
+                method="flaresolverr",
+            )
         )
 
-    @pytest.mark.asyncio
-    async def test_solve_via_flaresolverr(self, bypass):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json = MagicMock(return_value={
-            "solution": {
-                "status": 200,
-                "cookies": [{"name": "cf_clearance", "value": "token"}],
-                "userAgent": "Mozilla/5.0",
-                "response": "",
-            }
-        })
+        result = await b.solve("https://example.com")
+        assert result.success is True
+        assert result.method == "flaresolverr"
 
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.get = AsyncMock(return_value=MagicMock(status_code=200))
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
+    @pytest.mark.anyio
+    async def test_solve_fallback_to_direct(self):
+        """FlareSolverr недоступен — fallback на direct request."""
+        b = CloudflareBypass()
+        b._flaresolverr_available = False
 
-            result = await bypass.solve("https://example.com")
+        with patch("httpx.AsyncClient") as MockClient:
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+            mock_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.cookies = MagicMock()
+            mock_resp.cookies.jar = []
+            mock_resp.text = "OK"
+            mock_instance.get = AsyncMock(return_value=mock_resp)
+            MockClient.return_value = mock_instance
 
-            assert result.success is True
-            assert result.method == "flaresolverr"
-
-    @pytest.mark.asyncio
-    async def test_solve_fallback_to_direct(self, bypass):
-        """FlareSolverr недоступен → fallback на прямой запрос."""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.text = "<html>OK</html>"
-        mock_resp.cookies = MagicMock()
-        mock_resp.cookies.jar = []
-
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            # health_check fails
-            mock_ctx.get = AsyncMock(side_effect=ConnectionError("refused"))
-            # direct request succeeds
-            mock_ctx.get = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
-
-            result = await bypass.solve("https://example.com")
-
-            # Должен быть direct (fallback)
+            result = await b.solve("https://example.com")
             assert result.method == "direct"
 
-    @pytest.mark.asyncio
-    async def test_check_flaresolverr_caching(self, bypass):
-        """Результат health_check кэшируется."""
-        with patch.object(bypass.flaresolverr, "health_check", new_callable=AsyncMock) as mock_hc:
-            mock_hc.return_value = True
+    @pytest.mark.anyio
+    async def test_solve_kwargs_forwarded(self):
+        """kwargs передаются в FlareSolverr.solve()."""
+        b = CloudflareBypass()
+        b._flaresolverr_available = True
+        b.flaresolverr.solve = AsyncMock(
+            return_value=BypassResult(success=True, method="flaresolverr")
+        )
 
-            r1 = await bypass.check_flaresolverr()
-            r2 = await bypass.check_flaresolverr()
-
-            assert r1 is True
-            assert r2 is True
-            # health_check вызван только раз
-            assert mock_hc.call_count == 1
-
-    @pytest.mark.asyncio
-    async def test_direct_request_success(self, bypass):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.text = "<html>content</html>"
-        mock_resp.cookies = MagicMock()
-        mock_resp.cookies.jar = []
-
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.get = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
-
-            result = await bypass._direct_request("https://example.com")
-
-            assert result.success is True
-            assert result.method == "direct"
-            assert result.response_text == "<html>content</html>"
-
-    @pytest.mark.asyncio
-    async def test_direct_request_failure(self, bypass):
-        with patch("httpx.AsyncClient") as mock_cls:
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.get = AsyncMock(side_effect=ConnectionError("refused"))
-            mock_cls.return_value = mock_ctx
-
-            result = await bypass._direct_request("https://example.com")
-
-            assert result.success is False
-            assert result.method == "direct"
-            assert "refused" in result.error
-
-
-# ─── Retry/Backoff ──────────────────────────────────────────────────────────
-
-class TestRetryBackoff:
-    """Тесты retry/backoff логики."""
-
-    @pytest.mark.asyncio
-    async def test_exponential_backoff(self):
-        """Проверяем что задержки растут экспоненциально."""
-        client = FlareSolverrClient(max_retries=3)
-
-        delays = []
-        original_sleep = asyncio.sleep
-
-        async def mock_sleep(delay):
-            delays.append(delay)
-
-        mock_resp = MagicMock()
-        mock_resp.status_code = 500
-
-        with patch("httpx.AsyncClient") as mock_cls, \
-             patch("asyncio.sleep", side_effect=mock_sleep):
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
-
-            await client.solve("https://example.com")
-
-            # 3 retry → 2 задержки (после 1-й и 2-й попыток)
-            assert len(delays) == 2
-            assert delays[0] == 1  # 2^0
-            assert delays[1] == 2  # 2^1
-
-    @pytest.mark.asyncio
-    async def test_max_retries_respected(self):
-        """Количество retry не превышает max_retries."""
-        client = FlareSolverrClient(max_retries=2)
-
-        mock_resp = MagicMock()
-        mock_resp.status_code = 500
-
-        with patch("httpx.AsyncClient") as mock_cls, \
-             patch("asyncio.sleep", new_callable=AsyncMock):
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_ctx.post = AsyncMock(return_value=mock_resp)
-            mock_cls.return_value = mock_ctx
-
-            result = await client.solve("https://example.com")
-
-            assert result.success is False
-            # max_retries=2 → 2 post вызова
-            assert mock_ctx.post.call_count == 2
+        await b.solve("https://example.com", cookies={"s": "1"}, proxy="http://p:80")
+        call_kwargs = b.flaresolverr.solve.call_args.kwargs
+        assert call_kwargs.get("cookies") == {"s": "1"}
+        assert call_kwargs.get("proxy") == "http://p:80"

@@ -1,8 +1,8 @@
 ---
 name: Lab Playwright Expert
+owner: DoctorM&Ai
 type: framework
 status: active
-owner: ant
 priority: medium
 stack: [Python, Playwright, Docker]
 version: "2.0.0"
@@ -13,9 +13,6 @@ created: "2026-05-10"
 # Lab Playwright Expert
 
 Продвинутый фреймворк для автоматизации браузера на базе Playwright. v2.0.
-
-## Владелец
-Муравей (ant)
 
 ## Структура
 - `config/` — конфигурация
