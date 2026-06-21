@@ -1,3 +1,11 @@
+---
+description: "lab-playwright-expert — README"
+type: readme
+last_reviewed: 2026-06-21
+last_code_change: 2026-06-21
+status: active
+---
+
 # 🥷 Lab Playwright Kit
 
 > **Владелец:** DoctorM&Ai | **Статус:** active | **Версия:** 2.1.0
