@@ -712,9 +712,13 @@ class ParsingOrchestrator:
             )
 
     async def _run_data_parser(self, task: ParseTask) -> ParseResult:
-        """Запуск DataParser через BrowserManager."""
+        """Запуск DataParser через BrowserManager.
+        
+        Использует нативный парсинг через DataParser.parse() с адаптером
+        для совместимости с текущей версией BrowserManager.
+        """
         try:
-            from lab_playwright_kit.data_parser import DataParser, NicheType
+            from lab_playwright_kit.data_parser import DataParser, NicheType, detect_niche
             from lab_playwright_kit.browser import BrowserManager
 
             # Определяем нишу
@@ -730,21 +734,41 @@ class ParsingOrchestrator:
                 "twitter": NicheType.TWITTER,
                 "telegram": NicheType.TELEGRAM,
             }
-            niche = niche_map.get(task.schema, NicheType.GENERIC)
+            if task.schema in niche_map:
+                niche = niche_map[task.schema]
+            else:
+                niche = detect_niche(task.url)
+                if niche == NicheType.GENERIC:
+                    niche = NicheType.NEWS
 
-            async with BrowserManager(headless=True, timeout=task.timeout * 1000) as browser:
-                parser = DataParser(browser, profile=niche)
-                page = await browser.new_page()
-                await page.goto(task.url, wait_until="domcontentloaded", timeout=task.timeout * 1000)
-                result = await parser.extract_structured_data(page)
-                await page.close()
+            start_time = time.monotonic()
 
-            data = [result] if result else []
+            async with BrowserManager(headless=True, timeout=task.timeout * 1000) as browser_mgr:
+                # DataParser._ensure_page() вызывает await self._browser_mgr.get_context()
+                # Добавляем совместимый async метод если отсутствует
+                if not hasattr(browser_mgr, 'get_context'):
+                    _ctx = browser_mgr._context
+                    async def _get_context():
+                        return _ctx
+                    browser_mgr.get_context = _get_context
+                
+                parser = DataParser(
+                    browser_manager=browser_mgr,
+                    niche=niche,
+                    timeout=float(task.timeout),
+                    max_retries=2,
+                )
+                result = await parser.parse(task.url, niche=niche)
+
+            duration = time.monotonic() - start_time
+            data = [result.data] if result and result.data else []
             return ParseResult(
                 task=task,
                 status=ParseStatus.SUCCESS if data else ParseStatus.FAILED,
                 data=data,
                 items_count=len(data),
+                duration_seconds=duration,
+                errors=result.errors if result else [],
             )
         except Exception as e:
             return ParseResult(
