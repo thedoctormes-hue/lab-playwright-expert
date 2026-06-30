@@ -86,6 +86,15 @@ class PlaywrightPartSpider(Spider):
         "DOWNLOAD_DELAY": 2,
         "CONCURRENT_REQUESTS": 1,
         "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
+        "RETRY_TIMES": 3,
+        "RETRY_HTTP_CODES": [500, 502, 503, 504, 408, 429],
+        "DOWNLOADER_MIDDLEWARES": {
+            "lab_playwright_kit.scrapy_engine.middlewares.StealthMiddleware": 400,
+        },
+        "ITEM_PIPELINES": {
+            "lab_playwright_kit.scrapy_engine.pipelines.ValidationPipeline": 100,
+            "lab_playwright_kit.scrapy_engine.pipelines.DedupPipeline": 200,
+        },
         "PLAYWRIGHT_LAUNCH_OPTIONS": {
             "headless": True,
             "args": ["--no-sandbox"],

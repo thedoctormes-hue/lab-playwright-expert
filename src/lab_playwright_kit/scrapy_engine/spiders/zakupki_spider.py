@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import scrapy
+from loguru import logger
 
 from ..items import ScrapedContract
 
@@ -36,6 +37,15 @@ class ZakupkiSpider(scrapy.Spider):
         "CONCURRENT_REQUESTS_PER_DOMAIN": 2,
         "DEPTH_LIMIT": 5,
         "COOKIES_ENABLED": True,
+        "RETRY_TIMES": 3,
+        "RETRY_HTTP_CODES": [500, 502, 503, 504, 408, 429],
+        "DOWNLOADER_MIDDLEWARES": {
+            "lab_playwright_kit.scrapy_engine.middlewares.StealthMiddleware": 400,
+        },
+        "ITEM_PIPELINES": {
+            "lab_playwright_kit.scrapy_engine.pipelines.ValidationPipeline": 100,
+            "lab_playwright_kit.scrapy_engine.pipelines.DedupPipeline": 200,
+        },
         "FEEDS": {
             "./crawl_output/%(name)s_%(time)s.json": {
                 "format": "json",
@@ -74,6 +84,7 @@ class ZakupkiSpider(scrapy.Spider):
     def parse_listing(self, response):
         """Парсинг списка закупок."""
         self._current_page += 1
+        logger.info(f"[ZakupkiSpider] Parsing page {self._current_page}: {response.url}")
         if self._current_page > self.max_pages:
             return
 
@@ -83,20 +94,12 @@ class ZakupkiSpider(scrapy.Spider):
                 url=response.urljoin(card.css("a::attr(href)").get("")),
                 domain="zakupki.gov.ru",
                 spider_name=self.name,
-                title=card.css(".textBox .title::text").get("").strip(),
-                text=" ".join(card.css(".textBox ::text").getall()).strip(),
-                meta={
-                    "reg_number": card.css(".number::text").get(""),
-                    "price": card.css(".price::text").get(""),
-                    "customer": card.css(".customer::text").get(""),
-                    "status": card.css(".status::text").get(""),
-                },
-                links=[],
-                images=[],
-                status_code=response.status,
+                subject=card.css(".textBox .title::text").get("").strip(),
+                reg_number=card.css(".number::text").get(""),
+                price=card.css(".price::text").get(""),
+                customer=card.css(".customer::text").get(""),
+                status=card.css(".status::text").get(""),
                 crawl_time=datetime.now(timezone.utc).isoformat(),
-                depth=response.meta.get("depth", 0),
-                referer=response.meta.get("referer", ""),
             )
             yield item
 
