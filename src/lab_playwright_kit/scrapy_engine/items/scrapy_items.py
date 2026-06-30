@@ -266,6 +266,7 @@ class ScrapedContract(scrapy.Item):
     """Госзакупка — контракт с zakupki.gov.ru."""
 
     url = scrapy.Field()
+    domain = scrapy.Field()
     spider_name = scrapy.Field()
 
     reg_number = scrapy.Field()  # str: номер контракта

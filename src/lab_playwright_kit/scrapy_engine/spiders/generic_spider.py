@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import scrapy
+from loguru import logger
 
 from ..items import ScrapedPage
 
@@ -35,6 +36,15 @@ class GenericSpider(scrapy.Spider):
         "DOWNLOAD_DELAY": 1.5,
         "CONCURRENT_REQUESTS_PER_DOMAIN": 4,
         "DEPTH_LIMIT": 3,
+        "RETRY_TIMES": 3,
+        "RETRY_HTTP_CODES": [500, 502, 503, 504, 408, 429],
+        "DOWNLOADER_MIDDLEWARES": {
+            "lab_playwright_kit.scrapy_engine.middlewares.StealthMiddleware": 400,
+        },
+        "ITEM_PIPELINES": {
+            "lab_playwright_kit.scrapy_engine.pipelines.ValidationPipeline": 100,
+            "lab_playwright_kit.scrapy_engine.pipelines.DedupPipeline": 200,
+        },
         "FEEDS": {
             "./crawl_output/%(name)s_%(time)s.json": {
                 "format": "json",
@@ -76,6 +86,7 @@ class GenericSpider(scrapy.Spider):
             return
 
         self._pages_count += 1
+        logger.info(f"[GenericSpider] Parsing: {response.url} (depth={response.meta.get('depth', 0)})")
 
         # Извлечь данные
         page_item = ScrapedPage(
