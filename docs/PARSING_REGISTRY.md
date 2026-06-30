@@ -79,7 +79,7 @@ status: active
 - **Статус:** ⚠️ частично (парсеры привязаны к конкретным сайтам)
 - **Заметки:** специфичен для медицинских цен
 
-### 7. LLMParser (llm_parse)
+### 7. LLMParser + SelfHealingParser (llm_parse)
 - **URL:** любой (через Playwright Page)
 - **Тип данных:** любой (LLM извлекает по запросу)
 - **Модуль:** `src/lab_playwright_kit/llm_parse.py`
@@ -87,8 +87,10 @@ status: active
 - **Proxy:** через BrowserManager
 - **Rate limit:** нет
 - **Владелец:** все агенты
-- **Статус:** ⚠️ работает, но нет self-healing, нет кэширования
-- **Заметки:** лучший fallback для неструктурированных сайтов
+- **Статус:** ✅ self-healing + кэширование (2026-06-30)
+- **Заметки:** лучший fallback для неструктурированных сайтов. SelfHealingParser автоматически исправляет селекторы при изменениях сайта. ParseCache (TTL-based) кэширует результаты. Интегрирован в ParsingOrchestrator как fallback при 0 результатов от основного парсера.
+- **Классы:** LLMParser (базовый), SelfHealingParser (автоисправление), ParseCache (TTL-кэш)
+- **Интеграция:** ParsingOrchestrator._execute_parser → если spider вернул 0 items → fallback к SelfHealingParser
 
 ---
 
@@ -141,9 +143,9 @@ status: active
 
 ## Пробелы (что нужно сделать)
 
-- [ ] Единый оркестратор парсинга (parsing_orchestrator.py)
+- [x] Единый оркестратор парсинга (parsing_orchestrator.py) — ✅ done
 - [ ] Stealth для всех spider (сейчас только StealthMiddleware для Scrapy)
-- [ ] Self-healing для LLMParser
+- [x] Self-healing для LLMParser — ✅ done (SelfHealingParser + ParseCache)
 - [ ] Персистентная дедупликация (Redis/SQLite вместо in-memory set)
 - [ ] Мониторинг качества парсинга (метрики, алерты)
 - [ ] Residential proxy интеграция
