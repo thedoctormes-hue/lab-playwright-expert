@@ -1,0 +1,51 @@
+# Бестия (СнабЛаб) — конфиг парсинга госзакупок
+agent: bestia
+name: "СнабЛаб — Госзакупки"
+description: "Парсинг госзакупок по ключевым словам: стройка, оборудование, медицина"
+
+sources:
+  - url: "https://zakupki.gov.ru/epz/order/extendedsearch/results.html?searchString=%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0&morphology=on&pageNumber=1"
+    parser_type: zakupki_spider
+    schema: zakupki
+    keywords:
+      - "стройка"
+      - "оборудование"
+      - "медицина"
+      - "строительство"
+      - "ремонт"
+      - "медицинское оборудование"
+    max_pages: 10
+    stealth_level: advanced
+    timeout: 120
+    rate_limit_delay: 3.0
+    requires_proxy: true
+
+  - url: "https://zakupki.gov.ru/epz/order/extendedsearch/results.html?searchString=%D0%BE%D0%B1%D0%BE%D1%80%D1%83%D0%B4%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5&morphology=on&pageNumber=1"
+    parser_type: zakupki_spider
+    schema: zakupki
+    keywords:
+      - "оборудование"
+      - "техника"
+      - "инструменты"
+    max_pages: 10
+    stealth_level: advanced
+    timeout: 120
+    rate_limit_delay: 3.0
+    requires_proxy: true
+
+schedule:
+  cron: "0 6 * * *"
+  timezone: "UTC"
+  description: "Ежедневно в 06:00 UTC"
+
+output:
+  format: json
+  path: "/root/LabDoctorM/workspaces/bestia/data/zakupki/"
+  dedup: true
+  notify_telegram: true
+  telegram_chat: "@bestia_alerts"
+
+fallback:
+  primary: zakupki_spider
+  secondary: llm_parser
+  max_retries: 3

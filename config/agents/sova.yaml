@@ -1,0 +1,69 @@
+# Сова (autoexpert) — справочники авто
+agent: sova
+name: "Сова — Автозапчасти и справочники"
+description: "Парсинг каталогов автозапчастей, цен, наличия"
+
+sources:
+  - url: "https://www.exist.ru/"
+    parser_type: auto_parts_spider
+    schema: auto_parts
+    name: "Exist.ru"
+    stealth_level: standard
+    timeout: 60
+    search_examples:
+      - "BMW X5"
+      - "Toyota Camry"
+      - "Ford Focus"
+
+  - url: "https://www.autodoc.ru/"
+    parser_type: auto_parts_spider
+    schema: auto_parts
+    name: "Autodoc.ru"
+    stealth_level: standard
+    timeout: 60
+    search_examples:
+      - "VAG 071121160BT"
+      - "Bosch 0986479284"
+
+  - url: "https://emex.ru/"
+    parser_type: auto_parts_spider
+    schema: auto_parts
+    name: "Emex.ru"
+    stealth_level: standard
+    timeout: 60
+
+api:
+  enabled: true
+  endpoint: "/api/v1/sova/search"
+  description: "API endpoint для поиска по запросу из других агентов"
+  rate_limit: "100/hour"
+  response_format: json
+  params:
+    - name: "q"
+      type: string
+      description: "Поисковый запрос (марка, модель, артикул)"
+      required: true
+    - name: "source"
+      type: string
+      description: "Источник: exist, autodoc, emex, apex"
+      required: false
+    - name: "limit"
+      type: integer
+      description: "Максимум результатов"
+      default: 20
+
+schedule:
+  cron: "on_demand"
+  description: "По запросу через API или Telegram"
+
+output:
+  format: json
+  path: "/root/LabDoctorM/workspaces/sova/data/auto-parts/"
+  dedup: true
+  cache_ttl: 7200
+  notify_telegram: false
+
+fallback:
+  primary: auto_parts_spider
+  secondary: data_parser
+  max_retries: 2

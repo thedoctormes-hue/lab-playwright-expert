@@ -1,0 +1,72 @@
+# Ворон (lab-monitoring) — мониторинг AI-инструментов
+agent: voron
+name: "Ворон — AI Changelog Monitor"
+description: "Мониторинг changelog AI-продуктов, анализ изменений, алерты"
+
+sources:
+  - url: "https://openai.com/blog"
+    parser_type: llm_parser
+    schema: "извлечь все новые продукты, обновления, изменения в API, цены"
+    name: "OpenAI Blog"
+    stealth_level: standard
+    timeout: 60
+
+  - url: "https://blog.google/technology/ai/"
+    parser_type: llm_parser
+    schema: "извлечь все AI-анонсы, новые модели, обновления Gemini, Bard, Vertex AI"
+    name: "Google AI Blog"
+    stealth_level: standard
+    timeout: 60
+
+  - url: "https://www.anthropic.com/news"
+    parser_type: llm_parser
+    schema: "извлечь все анонсы Claude, новые модели, обновления safety"
+    name: "Anthropic News"
+    stealth_level: standard
+    timeout: 60
+
+  - url: "https://github.com/anthropics/claude-cookbook"
+    parser_type: data_parser
+    schema: generic
+    name: "Anthropic Claude Cookbook"
+    stealth_level: standard
+    timeout: 60
+
+  - url: "https://huggingface.co/posts"
+    parser_type: llm_parser
+    schema: "извлечь новые модели, датасеты, обновления библиотек"
+    name: "HuggingFace Posts"
+    stealth_level: standard
+    timeout: 60
+
+schedule:
+  cron: "0 10 * * 1"
+  timezone: "UTC"
+  description: "Еженедельно в понедельник 10:00 UTC"
+
+output:
+  format: json
+  path: "/root/LabDoctorM/workspaces/voron/data/ai-changelog/"
+  dedup: true
+  notify_telegram: true
+  telegram_chat: "@voron_ai_alerts"
+
+analysis:
+  enabled: true
+  highlight_keywords:
+    - "GPT-5"
+    - "Claude 4"
+    - "Gemini 2"
+    - "deprecat"
+    - "price change"
+    - "new model"
+    - "breaking change"
+  severity_levels:
+    critical: ["breaking change", "deprecat", "price increase"]
+    warning: ["new feature", "update", "beta"]
+    info: ["blog post", "announcement"]
+
+fallback:
+  primary: llm_parser
+  secondary: data_parser
+  max_retries: 2
