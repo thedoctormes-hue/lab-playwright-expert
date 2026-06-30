@@ -833,6 +833,41 @@ class ParsingOrchestrator:
             )
 
 
+    async def _run_self_healing_parser(self, task: ParseTask) -> ParseResult:
+        """Запуск SelfHealingParser как fallback."""
+        try:
+            from lab_playwright_kit.llm_parse import (
+                LLMParser, LLMConfig, SelfHealingParser,
+            )
+            from lab_playwright_kit.browser import BrowserManager
+
+            config = LLMConfig()
+            llm = LLMParser(config)
+            parser = SelfHealingParser(llm, max_retries=2)
+
+            async with BrowserManager(headless=True, timeout=task.timeout * 1000) as browser:
+                page = await browser.new_page()
+                await page.goto(task.url, wait_until="domcontentloaded", timeout=task.timeout * 1000)
+                result = await parser.extract_with_retry(
+                    page, task.schema or "извлечь все данные"
+                )
+                await page.close()
+
+            data = [result] if result and result.get("found", True) else []
+            return ParseResult(
+                task=task,
+                status=ParseStatus.SUCCESS if data else ParseStatus.FAILED,
+                data=data,
+                items_count=len(data),
+            )
+        except Exception as e:
+            return ParseResult(
+                task=task,
+                status=ParseStatus.FAILED,
+                errors=[f"SelfHealingParser error: {str(e)[:200]}"],
+            )
+
+
 # ─── Convenience Functions ───────────────────────────────────────────────────
 
 async def parse_url(
