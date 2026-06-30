@@ -14,48 +14,64 @@ status: active
 - **Тип данных:** универсальный (страницы, ссылки, мета-теги, текст)
 - **Spider:** `src/lab_playwright_kit/scrapy_engine/spiders/generic_spider.py`
 - **Item:** `ScrapedPage`
-- **Stealth:** нет (базовый Scrapy)
+- **Stealth:** ✅ StealthMiddleware (HTTP-level)
 - **Proxy:** нет
 - **Rate limit:** DOWNLOAD_DELAY=1.5, CONCURRENT_REQUESTS_PER_DOMAIN=4
+- **Pipelines:** ValidationPipeline + DedupPipeline
+- **Retry:** RETRY_TIMES=3
+- **Логирование:** loguru
 - **Владелец:** все агенты (универсальный)
-- **Статус:** ⚠️ работает, но без stealth
+- **Статус:** ✅ active (production-ready: stealth + pipelines + tests)
 - **Заметки:** использует FieldMapping из data_parser для структурирования
+- **Тесты:** `tests/test_generic_spider.py` (11 tests)
 
 ### 2. ZakupkiSpider (zakupki)
 - **URL:** zakupki.gov.ru (44-ФЗ, 223-ФЗ)
 - **Тип данных:** госзакупки (номер, цена, заказчик, статус)
 - **Spider:** `src/lab_playwright_kit/scrapy_engine/spiders/zakupki_spider.py`
 - **Item:** `ScrapedContract`
-- **Stealth:** нет
+- **Stealth:** ✅ StealthMiddleware (HTTP-level)
 - **Proxy:** требует FlareSolverr (Cloudflare)
 - **Rate limit:** DOWNLOAD_DELAY=3.0, CONCURRENT_REQUESTS_PER_DOMAIN=2
+- **Pipelines:** ValidationPipeline + DedupPipeline
+- **Retry:** RETRY_TIMES=3
+- **Логирование:** loguru
 - **Владелец:** Бестия (СнабЛаб)
-- **Статус:** ⚠️ работает, требует FlareSolverr для Cloudflare
+- **Статус:** ✅ active (production-ready: stealth + pipelines + tests)
 - **Заметки:** селекторы могут устареть при редизайне zakupki.gov.ru
+- **Тесты:** `tests/test_zakupki_spider.py` (8 tests)
 
 ### 3. AvitoDealerSpider (avito_dealer)
 - **URL:** avito.ru/moskva/avtomobili
 - **Тип данных:** дилерские объявления авто (марка, цена, пробег, параметры)
 - **Spider:** `src/lab_playwright_kit/scrapy_engine/spiders/avito_dealer_spider.py`
 - **Item:** dict (не Scrapy Item!) или ScrapedAuto
-- **Stealth:** нет
+- **Stealth:** ✅ StealthMiddleware (HTTP-level)
 - **Proxy:** нет
-- **Rate limit:** нет (single-threaded)
+- **Rate limit:** DOWNLOAD_DELAY=2.0, CONCURRENT_REQUESTS_PER_DOMAIN=2
+- **Pipelines:** DedupPipeline
+- **Retry:** RETRY_TIMES=3
+- **Логирование:** loguru
 - **Владелец:** не назначен
-- **Статус:** ⚠️ работает как standalone-парсинг (BeautifulSoup), Scrapy-версия без stealth
+- **Статус:** ✅ active (production-ready: stealth + pipelines + tests)
 - **Заметки:** два режима — parse_avito_listing (BS4) и Scrapy Spider
+- **Тесты:** `tests/test_avito_dealer_spider.py` (17 tests)
 
 ### 4. PlaywrightPartSpider (auto_parts)
 - **URL:** emex.ru, exist.ru, apex.ru, fobil-auto.ru, autoeuro.ru, mymajor.ru, autodoc.ru
 - **Тип данных:** автозапчасти (артикул, цена, наличие, доставка)
 - **Spider:** `src/lab_playwright_kit/scrapy_engine/spiders/auto_parts/part_spider.py`
 - **Item:** `ScrapedPart`
-- **Stealth:** Playwright headless
+- **Stealth:** ✅ StealthMiddleware (HTTP-level) + Playwright headless
 - **Proxy:** нет
 - **Rate limit:** DOWNLOAD_DELAY=2, CONCURRENT_REQUESTS=1
+- **Pipelines:** ValidationPipeline + DedupPipeline
+- **Retry:** RETRY_TIMES=3
+- **Логирование:** loguru
 - **Владелец:** не назначен
-- **Статус:** ✅ работает (7 магазинов, 3 метода поиска)
-- **Заметки:** самый зрелый spider, поддерживает API-метод (autodoc)
+- **Статус:** ✅ active (production-ready: stealth + pipelines + tests)
+- **Заметки:** самый зрелый spider, поддерживает API-метод (autodoc), 7 магазинов, 3 метода поиска
+- **Тесты:** `tests/test_part_spider.py` (17 tests)
 
 ### 5. DataParser (data_parser)
 - **URL:** любой (через BrowserManager)
@@ -144,14 +160,14 @@ status: active
 ## Пробелы (что нужно сделать)
 
 - [x] Единый оркестратор парсинга (parsing_orchestrator.py) — ✅ done
-- [ ] Stealth для всех spider (сейчас только StealthMiddleware для Scrapy)
+- [x] Stealth для всех spider (2026-06-30: StealthMiddleware для всех 4 spider)
 - [x] Self-healing для LLMParser — ✅ done (SelfHealingParser + ParseCache)
 - [ ] Персистентная дедупликация (Redis/SQLite вместо in-memory set)
 - [ ] Мониторинг качества парсинга (метрики, алерты)
 - [ ] Residential proxy интеграция
 - [ ] Автоматизация для Ворона, Котолизатора, Совы
-- [ ] Тесты для ZakupkiSpider (нет тестов)
-- [ ] Тесты для AvitoDealerSpider (нет тестов)
+- [x] Тесты для ZakupkiSpider (2026-06-30: 8 tests)
+- [x] Тесты для AvitoDealerSpider (2026-06-30: 17 tests)
 - [ ] Документация по запуску spider (docs/RUN_SPIDERS.md)
 
 ---
