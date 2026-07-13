@@ -1,0 +1,72 @@
+# Котолизатор (VPN) — мониторинг VPN-панелей
+agent: kotolizator
+name: "Котолизатор — VPN Panel Monitor"
+description: "Мониторинг доступности VPN-панелей и статуса туннелей"
+
+sources:
+  - url: "http://localhost:8080/status"
+    parser_type: data_parser
+    schema: generic
+    name: "VPN Panel Local"
+    profile: generic
+    stealth_level: none
+    timeout: 15
+    check_type: "http_status"
+
+  - url: "https://api.ipify.org?format=json"
+    parser_type: data_parser
+    schema: generic
+    name: "IP Check (ipify)"
+    profile: generic
+    stealth_level: none
+    timeout: 10
+    check_type: "ip_change"
+
+  - url: "https://www.dnsleaktest.com/"
+    parser_type: data_parser
+    schema: generic
+    name: "DNS Leak Test"
+    profile: generic
+    stealth_level: standard
+    timeout: 30
+    check_type: "dns_leak"
+
+health_checks:
+  - name: "VPN Tunnel Status"
+    url: "http://localhost:8080/status"
+    expected_status: 200
+    check_interval_minutes: 30
+
+  - name: "Internet Connectivity"
+    url: "https://google.com"
+    expected_status: 200
+    check_interval_minutes: 15
+
+  - name: "IP Leak Check"
+    url: "https://api.ipify.org?format=json"
+    check_type: "ip_not_equals"
+    expected_ip: ""  # если пустой — IP должен отличаться от реального
+    check_interval_minutes: 60
+
+schedule:
+  cron: "0 */6 * * *"
+  timezone: "UTC"
+  description: "Каждые 6 часов"
+
+output:
+  format: json
+  path: "/root/LabDoctorM/workspaces/kotolizator/data/vpn-monitor/"
+  notify_telegram: true
+  telegram_chat: "@kotolizator_alerts"
+
+alerts:
+  on_vpn_down: true
+  on_ip_leak: true
+  on_dns_leak: true
+  on_high_latency:
+    threshold_ms: 200
+
+fallback:
+  primary: data_parser
+  secondary: site_health_monitor
+  max_retries: 3

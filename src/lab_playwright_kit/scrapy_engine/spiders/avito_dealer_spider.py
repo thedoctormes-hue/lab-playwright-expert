@@ -280,6 +280,20 @@ class AvitoDealerSpider(Spider):
     name = "avito_dealer"
     allowed_domains = ["avito.ru"]
 
+    custom_settings = {
+        "ROBOTSTXT_OBEY": True,
+        "DOWNLOAD_DELAY": 2.0,
+        "CONCURRENT_REQUESTS_PER_DOMAIN": 2,
+        "RETRY_TIMES": 3,
+        "RETRY_HTTP_CODES": [500, 502, 503, 504, 408, 429],
+        "DOWNLOADER_MIDDLEWARES": {
+            "lab_playwright_kit.scrapy_engine.middlewares.StealthMiddleware": 400,
+        },
+        "ITEM_PIPELINES": {
+            "lab_playwright_kit.scrapy_engine.pipelines.DedupPipeline": 200,
+        },
+    }
+
     def __init__(self, url: str = "", brand: str = "", max_pages: int = 10, **kwargs):
         super().__init__(**kwargs)
         self.start_urls = [url] if url else []
@@ -287,6 +301,7 @@ class AvitoDealerSpider(Spider):
         self.max_pages = int(max_pages)
 
     def parse(self, response):
+        logger.info(f"[AvitoDealerSpider] Parsing: {response.url}")
         cars = parse_avito_listing(response.text, response.url, self.brand)
         for car in cars:
             yield car

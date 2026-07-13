@@ -1,0 +1,80 @@
+# Стрейкбрехер (fullstack) — парсинг для E2E тестирования
+agent: streikbrecher
+name: "Стрейкбрехер — E2E Test Data"
+description: "Парсинг тестовых данных и staging-окружений для Myrmex Control"
+
+sources:
+  - url: "https://the-internet.herokuapp.com/"
+    parser_type: data_parser
+    schema: generic
+    name: "The Internet (Heroku)"
+    profile: generic
+    stealth_level: none
+    timeout: 30
+    test_data:
+      - login_form
+      - dynamic_loading
+      - dropdown
+      - tables
+      - file_upload
+
+  - url: "https://demoqa.com/"
+    parser_type: data_parser
+    schema: generic
+    name: "DemoQA"
+    profile: generic
+    stealth_level: none
+    timeout: 30
+    test_data:
+      - forms
+      - widgets
+      - interactions
+      - tables
+
+  - url: "https://www.saucedemo.com/"
+    parser_type: data_parser
+    schema: ecommerce
+    name: "SauceDemo"
+    profile: ecommerce
+    stealth_level: none
+    timeout: 30
+    test_data:
+      - login
+      - product_list
+      - cart
+      - checkout
+
+myrmex_integration:
+  enabled: true
+  control_url: "http://localhost:9090"
+  description: "Передача распарсенных тестовых данных в Myrmex Control"
+  data_types:
+    - selectors
+    - form_data
+    - expected_values
+    - page_objects
+  format: "myrmex_json"
+
+ci_cd:
+  trigger: "on_commit"
+  description: "Запуск парсинга при коммите в тестовый репозиторий"
+  branches:
+    - main
+    - develop
+    - "feature/*"
+  webhook_url: "/api/v1/streikbrecher/trigger"
+
+schedule:
+  cron: "on_ci_trigger"
+  description: "При запуске CI/CD pipeline"
+
+output:
+  format: json
+  path: "/root/LabDoctorM/workspaces/streikbrecher/data/test-data/"
+  notify_telegram: false
+  push_to_myrmex: true
+
+fallback:
+  primary: data_parser
+  secondary: llm_parser
+  max_retries: 1
