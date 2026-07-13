@@ -182,21 +182,6 @@ from .price_parser import (
     KDLParser,
 )
 
-# Parsing Orchestrator
-from .parsing_orchestrator import (
-    ParsingOrchestrator,
-    ParseTask,
-    ParseResult,
-    ParseStatus,
-    ParsePriority,
-    ParserType,
-    StealthLevel,
-    ParsingMetrics,
-    SOURCE_REGISTRY,
-    NICHE_TO_PARSER,
-    parse_url,
-    parse_batch,
-)
 from .data_parser import (
     BatchParser,
     DataParser,

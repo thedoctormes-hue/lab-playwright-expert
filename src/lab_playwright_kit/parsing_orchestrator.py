@@ -527,7 +527,7 @@ class ParsingOrchestrator:
                 with open(output_file) as f:
                     data = json.load(f)
                 import os
-                os.unlink(task_url)
+                os.unlink(output_file)
             except (FileNotFoundError, json.JSONDecodeError):
                 data = []
 
