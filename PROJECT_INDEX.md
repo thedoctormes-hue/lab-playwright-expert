@@ -1,3 +1,12 @@
+---
+description: "Lab Playwright Expert — карточка проекта (индекс)"
+type: project-index
+id: proj-lab-playwright-expert
+project_type: framework
+priority: medium
+last_reviewed: 2026-07-14
+status: active
+---
 # Lab Playwright Expert
 
 | Поле | Значение |
