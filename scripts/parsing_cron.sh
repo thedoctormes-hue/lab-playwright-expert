@@ -14,7 +14,7 @@ set -euo pipefail
 PROJECT_DIR="/root/LabDoctorM/projects/lab-playwright-expert"
 PYTHON="python3"
 PYTHONPATH="src"
-LOG_DIR="/root/LabDoctorM/logs/parsing"
+LOG_DIR="/root/LabDoctorM/.ops/logs/parsing"
 TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
 
 # ─── Цвета для вывода ───────────────────────────────────────────────────────

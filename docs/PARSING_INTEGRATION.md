@@ -62,7 +62,7 @@
 
 **Cron:**
 ```
-0 6 * * * cd /root/LabDoctorM/projects/lab-playwright-expert && bash scripts/parsing_cron.sh bestia >> /root/LabDoctorM/logs/parsing/bestia.log 2>&1
+0 6 * * * cd /root/LabDoctorM/projects/lab-playwright-expert && bash scripts/parsing_cron.sh bestia >> /root/LabDoctorM/.ops/logs/parsing/bestia.log 2>&1
 ```
 
 ---
@@ -89,7 +89,7 @@
 
 **Cron:**
 ```
-0 10 * * 1 cd /root/LabDoctorM/projects/lab-playwright-expert && bash scripts/parsing_cron.sh voron >> /root/LabDoctorM/logs/parsing/voron.log 2>&1
+0 10 * * 1 cd /root/LabDoctorM/projects/lab-playwright-expert && bash scripts/parsing_cron.sh voron >> /root/LabDoctorM/.ops/logs/parsing/voron.log 2>&1
 ```
 
 ---
@@ -119,7 +119,7 @@
 
 **Cron:**
 ```
-0 */6 * * * cd /root/LabDoctorM/projects/lab-playwright-expert && bash scripts/parsing_cron.sh kotolizator >> /root/LabDoctorM/logs/parsing/kotolizator.log 2>&1
+0 */6 * * * cd /root/LabDoctorM/projects/lab-playwright-expert && bash scripts/parsing_cron.sh kotolizator >> /root/LabDoctorM/.ops/logs/parsing/kotolizator.log 2>&1
 ```
 
 ---
@@ -220,7 +220,7 @@ parse_requests_by_domain{domain="..."}
 ```
 
 ### Логи:
-- `/root/LabDoctorM/logs/parsing/<agent>_<timestamp>.log`
+- `/root/LabDoctorM/.ops/logs/parsing/<agent>_<timestamp>.log`
 
 ### Кэширование:
 - TTL: 3600s (настраивается в orchestrator)
